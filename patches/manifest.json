@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "base_sha256": "ba2ec29027d11f955c7a03d12380461750a5d28cf51ac575196fbc5ac651d358",
+  "source_url": "https://devast.io/js/8arQWmH5bsutMu.js",
+  "legacy_sha256": "959d536f408649ad09fd7f6acff55248d5db1ebe75ab0a6e3183491e016e1323",
+  "patches": [
+    {
+      "id": "track-entity-removal",
+      "literal": true,
+      "anchor": "ι‌̵ [рᚅ༩](ᴘ४１,ԁߎ̉,ոᚄރ,ᴎеࡇ,Іࡈ５);",
+      "mode": "after",
+      "replacement": "\nif(__BBY)__BBY.track(null,ᴘ४１,ոᚄރ,ᴎеࡇ,false);\n"
+    },
+    {
+      "id": "track-entity-update",
+      "literal": true,
+      "anchor": "(ոހߑ!==ο６ᴎ)&&( ο６ᴎ( ᴏᴌ̴, ᅟᚁ६ [ еᴑᚄ+4 ] ,ᅟᚁ६[ еᴑᚄ+ᴑ̠͠] ) ) ;",
+      "mode": "after",
+      "replacement": "\nif(__BBY)__BBY.track(ᴏᴌ̴,ᴘ४１,ոᚄރ,ᴎеࡇ,true);\n"
+    },
+    {
+      "id": "track-interactable-buildings",
+      "literal": true,
+      "anchor": "function ϲᄉ᠋(ᴑ̙̎,ρ́१,ᴇ̍᠌){",
+      "mode": "after",
+      "replacement": "\nif(__BBY)__BBY.building(ρ́१.αބ̞,ρ́१.ᴀܛ٤,ᴑ̙̎.ࡀ︂̄,ρ́१.id,ρ́१.ᴘ४１,ρ́१.x,ρ́१.y);\n"
+    },
+    {
+      "id": "track-render-camera",
+      "literal": true,
+      "anchor": "а᠋ᄄ=(( (Ꮷވᚉ /ρ̟０)-ᅠᏧ‍ [е̎ࠀ ])-ᴉ٤і)+ ⲟ９༧;",
+      "mode": "after",
+      "replacement": "\nif(__BBY)__BBY.camera(і̉е,а᠋ᄄ);\n"
+    },
+    {
+      "id": "respect-aimbot-angle",
+      "literal": true,
+      "anchor": "eval(ᴏޅߎ( і༩̗(ɑ٥༨(Ꮷ̙ᄄ) )));",
+      "mode": "replace",
+      "replacement": "eval(\" function ѕ᠋༢() {if (  (ϲ１٤-о̟̏ )>ﾠܓࡃ){var ԁᄇ๕= (((((ρ̃५ [ﾠ̘ࡄ] -օ‌އ) *180 )/Math[ρ̜̠ ] )% 0x168)+0x168)%0X168 ;  if ( ԁᄇ๕>02){оࠄ٠ = ϲ１٤;о̟̏=ϲ１٤;օ‌އ=ρ̃५ [ ѕ̈٨];ԁᄇ๕=Math[օ︌ᄀ](((((ρ̃५[ѕ̈٨]*0Xb4)/Math [ ࡀ‍ᴀ]) % 360 )+360 ) % 0x168); if(!(__BBY&&__BBY.hasAim())){ᴄ༨७(ᴇ٣٠.ոᄃо ( [ ι̞̋,ԁᄇ๕])) ;} }}}; ; function ρ٨٨(){if((ϲ１٤-о̟̏)>ο̗̇) { var ԁᄇ๕= ( ( ( ( (ρ̃५[ﾠ̘ࡄ]-օ‌އ)  * 0264 ) /Math [ρ̜̠ ] ) % 360 ) +360)%0X168;if(ԁᄇ๕ > 02 ) {оࠄ٠=ϲ１٤;о̟̏=ϲ１٤;օ‌އ=ρ̃५[ᅟ̖͡];ԁᄇ๕=Math[ᴇ٦ᴏ](((((ρ̃५[ᅠ᠌ࠀ]* 180 ) / Math [ ρ̜̠] )% 0x168)+ 0550) % 0X168) ;if(!(__BBY&&__BBY.hasAim())){ᴄ༨७(ᴇ٣٠.ոᄃо( [ оܓ༥,ԁᄇ๕]));}} }}; ;\");"
+    },
+    {
+      "id": "fast-nearby-pickup",
+      "literal": true,
+      "anchor": "еܞ︌.ᅠᏧ‍.ιᄁ८=ρ́१ [εܜ͠];",
+      "mode": "after",
+      "replacement": "\nif(__BBY)__BBY.pickupNearby(ρ́१.id);\n"
+    },
+    {
+      "id": "install-bby-runtime",
+      "literal": true,
+      "anchor": "ι‌̵.init(0x258,072460, 5000);",
+      "mode": "before",
+      "replacement_files": [
+        "../mod/bby.js",
+        "../mod/current-adapter.js"
+      ],
+      "assert_contains": "window.BBY = __BBY;"
+    }
+  ]
+}

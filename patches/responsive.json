@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "base_sha256": "ba2ec29027d11f955c7a03d12380461750a5d28cf51ac575196fbc5ac651d358",
+  "source_url": "https://devast.io/js/8arQWmH5bsutMu.js",
+  "legacy_sha256": "1834d968561353834376f8774ff6a0074dc8077f6727f0ee9b3f0189b40d45e6",
+  "patches": [
+    {
+      "id": "responsive-zoom",
+      "literal": true,
+      "anchor": "ᴇ️̅[α٦ᴄ]+І‌ߐ[ԁ̵ࡅ]",
+      "mode": "replace",
+      "replacement": "(__responsiveMod?__responsiveMod.zoomOffset(ᴇ️̅[α٦ᴄ]):ᴇ️̅[α٦ᴄ])+І‌ߐ[ԁ̵ࡅ]"
+    },
+    {
+      "id": "responsive-mines",
+      "literal": true,
+      "anchor": "function ρᚂ٩(ᴑ̙̎, ρ́१,ᅟރ̈,ɑᚄࡁ,ⲥ٩ᴇ,ᴏࡀ̞ ){",
+      "mode": "after",
+      "replacement": "if(__responsiveMod&&__responsiveMod.settings.ShowMines){а०̅.save();try{а०̅.globalAlpha=1;ᴘᚉ٦.ᴑ̸ᴘ(ᴑ̙̎.hidden[ρ́१.id%3],і̉е+ρ́१.x+ᅟރ̈,а᠋ᄄ+ρ́१.y+ɑᚄࡁ,р️ߓ*ⲥ٩ᴇ,0,0,ᴏࡀ̞)}finally{а०̅.restore()}return;}"
+    },
+    {
+      "id": "responsive-xray-buildings",
+      "literal": true,
+      "anchor": "ᴑ̙̎.ᴎߌ๕(ᴑ̙̎,ρ́१, ᅟރ̈,ɑᚄࡁ,ⲥ٩ᴇ,ᴏࡀ̞)",
+      "mode": "replace",
+      "replacement": "(()=>{const alpha=а०̅.globalAlpha;if(__responsiveMod&&__responsiveMod.settings.XrayBuildings)а०̅.globalAlpha=__responsiveMod.settings.Xraytransparency;try{return ᴑ̙̎.ᴎߌ๕(ᴑ̙̎,ρ́१, ᅟރ̈,ɑᚄࡁ,ⲥ٩ᴇ,ᴏࡀ̞)}finally{а०̅.globalAlpha=alpha}})()"
+    },
+    {
+      "id": "track-render-camera",
+      "literal": true,
+      "anchor": "а᠋ᄄ=(( (Ꮷވᚉ /ρ̟０)-ᅠᏧ‍ [е̎ࠀ ])-ᴉ٤і)+ ⲟ９༧;",
+      "mode": "after",
+      "replacement": "\n__responsiveView={x:і̉е,y:а᠋ᄄ,scale:ρ̟０,ctx:а०̅};\n"
+    },
+    {
+      "id": "install-responsive-runtime",
+      "literal": true,
+      "anchor": "ι‌̵.init(0x258,072460, 5000);",
+      "mode": "before",
+      "replacement_files": [
+        "../mod/dat-gui.js",
+        "../mod/responsive.js",
+        "../mod/responsive-adapter.js"
+      ],
+      "assert_contains": "window.__devastMod=__responsiveMod;"
+    }
+  ],
+  "uploaded_source": "game.modded.aim-responsive.js",
+  "uploaded_sha256": "e624613e6fe1ee6502143323cee41b4ecbad53a72a6a40c02c52731b195e9a31"
+}
