@@ -4,7 +4,7 @@ on:
   schedule:
     - cron: '*/5 * * * *'
 permissions:
-  contents: read
+  contents: write
 concurrency:
   group: watch-responsive
   cancel-in-progress: false
@@ -30,3 +30,21 @@ jobs:
           path: build/watch/
           if-no-files-found: warn
           retention-days: 7
+      - name: Publish only a compatible build to the stable path
+        if: always()
+        shell: bash
+        run: |
+          if [ ! -f build/watch/status.json ]; then exit 0; fi
+          state=$(python -c "import json; print(json.load(open('build/watch/status.json'))['status'])")
+          case "$state" in
+            verified_bindings) mkdir -p dist; cp build/watch/game.modded.js dist/game.modded.js ;;
+            new_version_needs_remapping) rm -f dist/game.modded.js ;;
+            *) exit 0 ;;
+          esac
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A -- dist/game.modded.js
+          if ! git diff --cached --quiet; then
+            git commit -m "Update compatible game bundle"
+            git push origin HEAD:main
+          fi
