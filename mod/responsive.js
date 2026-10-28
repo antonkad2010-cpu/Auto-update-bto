@@ -163,6 +163,10 @@ function __installDevastMod(B) {
       localStorage.setItem(SAVE + ':ilm1', '1');
     }
   } catch (_) {}
+  const aimRanges = {distanceCoefficient:[10,1000], bulletSpeedCoefficient:[1,15], offsetCoefficient:[0,3]};
+  for (const [key, [min, max]] of Object.entries(aimRanges)) {
+    if (!Number.isFinite(MOD[key]) || MOD[key] < min || MOD[key] > max) MOD[key] = defaults[key];
+  }
   MOD.zoomFactor = 1;
   MOD.ShowGauges = false;
   MOD.KarmaAboveHead = false;
@@ -898,6 +902,8 @@ function __installDevastMod(B) {
   function setSetting(key, value) {
     if (!Object.prototype.hasOwnProperty.call(defaults, key) || typeof value !== typeof defaults[key]) throw new Error('Invalid setting: ' + key);
     if (typeof value === 'number' && !Number.isFinite(value)) throw new Error('Invalid numeric setting');
+    const bounds = aimRanges[key];
+    if (bounds && (value < bounds[0] || value > bounds[1])) throw new Error('Setting out of range: ' + key);
     MOD[key] = value;
     if (key === 'PlayersListEnabled' && value) { listPage = 0; lastListUpdate = -Infinity; }
     if (key === 'SpamChatEnabled') {
@@ -932,25 +938,29 @@ function __installDevastMod(B) {
   };
   Aimbot.findNearestPlayerTo = function (coords, limit) {
     let selected = null, nearest = limit;
-    const consider = targets => {
+    const consider = (targets, players) => {
       for (const target of targets) {
-        if (!target || !target.active || target.id === B.world.ᅠᏧ‍.id || sameClan(target.id)) continue;
+        if (!target || !target.active || (players && (target.id === B.world.ᅠᏧ‍.id || sameClan(target.id)))) continue;
         const distance = Math.hypot(coords.x - target.x, coords.y - target.y);
         if (distance < nearest) { selected = target; nearest = distance; }
       }
     };
-    if (MOD.target === 'players' || MOD.target === 'all') consider(activeTargets(true));
-    if (MOD.target === 'ghouls' || MOD.target === 'all') consider(activeTargets(false));
+    if (MOD.target === 'players' || MOD.target === 'all') consider(activeTargets(true), true);
+    if (MOD.target === 'ghouls' || MOD.target === 'all') consider(activeTargets(false), false);
     return selected;
   };
   Aimbot.resolve = function () {
     const self = GetAllTargets.getPlayerById(B.world.ᅠᏧ‍.id);
-    if (!self || !self.active) { this.targetPlayer = null; return this.lastAngle; }
+    if (!self || !self.active) { this.targetPlayer = null; GetAllTargets.resetLines(); return this.lastAngle; }
     const target = MOD.lockId > -1 ? GetAllTargets.getPlayerById(MOD.lockId) :
       MOD.mouseFovEnable ? this.findNearestPlayerTo(GetAllTargets.mouseMapCords, MOD.mouseFov) : this.findNearestPlayerTo(self, 2500);
     this.targetPlayer = target && target.active ? target : null;
-    if (!this.targetPlayer) return this.lastAngle;
-    const factor = Math.hypot(self.x - target.x, self.y - target.y) / MOD.distanceCoefficient + MOD.offsetCoefficient;
+    if (!this.targetPlayer) { GetAllTargets.resetLines(); return this.lastAngle; }
+    // ILM stores displacement per packet, not velocity per millisecond.
+    // 4 is its original unused speed default: preserve that exact baseline,
+    // and scale only the flight-dependent term (not the constant offset).
+    const speedRatio = 4 / MOD.bulletSpeedCoefficient;
+    const factor = (Math.hypot(self.x - target.x, self.y - target.y) / MOD.distanceCoefficient) * speedRatio + MOD.offsetCoefficient;
     const x = target.prevX[0] === -1 ? target.x : target.x + factor * (target.x - target.prevX[0]);
     const y = target.prevY[0] === -1 ? target.y : target.y + factor * (target.y - target.prevY[0]);
     this.lastAngle = Math.atan2(y - self.y, x - self.x) * (180 / Math.PI);
@@ -962,6 +972,7 @@ function __installDevastMod(B) {
     GetAllTargets.lastId = B.world.ᅠᏧ‍.id;
     if (!MOD.AimBotEnabled) return;
     const angle = this.resolve();
+    if (!this.targetPlayer) return;
     __send([6, angle], true);
     if (MOD.autoFire && this.wannaFire()) { __send([4]); __send([5]); }
   };
@@ -1640,7 +1651,7 @@ function __installDevastMod(B) {
     add(aim, 'mouseFov', 'Cursor range', 1, 20000, 1);
     add(aim, 'lockId', 'Lock player ID', -1, 65535, 1);
     add(aim, 'distanceCoefficient', 'Distance coefficient', 10, 1000, 10);
-    add(aim, 'bulletSpeedCoefficient', 'Bullet speed (ILM legacy)', 1, 15, .25);
+    add(aim, 'bulletSpeedCoefficient', 'Bullet speed coefficient', 1, 15, .25);
     add(aim, 'offsetCoefficient', 'Prediction offset', 0, 3, .1);
     aim.addColor(MOD, 'visualizeResolvingColor').onChange(persist);
     const zoom = menu.addFolder('Zoom');

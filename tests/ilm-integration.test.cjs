@@ -77,7 +77,7 @@ test('500 packet-driven ILM scenarios match the original selection, lead line an
     const rows=[{pid:2,x:500+Math.floor(random()*1000),y:500+Math.floor(random()*1000)},{pid:3,x:500+Math.floor(random()*1000),y:500+Math.floor(random()*1000)},{pid:0,uid:7,type:13,x:500+Math.floor(random()*1000),y:500+Math.floor(random()*1000)}];
     f.packet(rows);f.api.settings.target=['players','ghouls','all'][i%3];f.api.settings.lockId=i%5===0?2:-1;f.api.settings.mouseFovEnable=i%2===0;f.api.settings.mouseFov=i%7===0?50:12345;f.api.settings.distanceCoefficient=10+Math.floor(random()*991);f.api.settings.offsetCoefficient=random()*3;f.api.targets.mouseMapCords={x:random()*2000,y:random()*2000};
     targets.mouseMapCords=f.api.targets.mouseMapCords;const expected=original.resolve();const expectedLine=Array.from(['x1','y1','x2','y2'],k=>f.api.targets.lines[0][k]);
-    const actual=f.api.aim.resolve();assert.equal(actual,expected,'angle case '+i);assert.equal(f.api.aim.targetPlayer,original.targetPlayer,'target case '+i);assert.equal(f.api.aim.wannaFire(),original.wannaFire(),'fire case '+i);assert.deepEqual(['x1','y1','x2','y2'].map(k=>f.api.targets.lines[0][k]),expectedLine,'line case '+i);
+    const actual=f.api.aim.resolve();assert.equal(actual,expected,'angle case '+i);assert.equal(f.api.aim.targetPlayer,original.targetPlayer,'target case '+i);assert.equal(f.api.aim.wannaFire(),original.wannaFire(),'fire case '+i);assert.deepEqual(['x1','y1','x2','y2'].map(k=>f.api.targets.lines[0][k]),original.targetPlayer ? expectedLine : [-1,-1,-1,-1],'line case '+i);
   }
 });
 
@@ -92,10 +92,11 @@ test('clan exclusion preserves the original team filter with current clan genera
 test('native angle functions update their cache while only their send is suppressed',()=>{
   const native=fs.readFileSync(path.join(root,'mod/ilm-native-angle.js'),'utf8');
   const fixture=require('./fixtures/ilm-native-angle.json');const sent=[];
-  const context=vm.createContext({...fixture.constants,__responsiveMod:{settings:{AimBotEnabled:true}},ρ̃५:{angle:.5},ϲ１٤:1000,о̟̏:0,օ‌އ:0,оࠄ٠:0,ﾠܓࡃ:0,ο̗̇:0,ᴄ༨७:x=>sent.push(x),ᴇ٣٠:{ոᄃо:x=>x}});
+  const context=vm.createContext({...fixture.constants,__responsiveMod:{settings:{AimBotEnabled:true},aim:{targetPlayer:{active:true}}},ρ̃५:{angle:.5},ϲ１٤:1000,о̟̏:0,օ‌އ:0,оࠄ٠:0,ﾠܓࡃ:0,ο̗̇:0,ᴄ༨७:x=>sent.push(x),ᴇ٣٠:{ոᄃо:x=>x}});
   vm.runInContext(native,context);vm.runInContext('ѕ᠋༢()',context);
   assert.equal(context.օ‌އ,.5);assert.equal(context.о̟̏,1000);assert.equal(sent.length,0);
-  context.__responsiveMod.settings.AimBotEnabled=false;context.ρ̃५.angle=1;context.ϲ１٤=2000;vm.runInContext('ρ٨٨()',context);assert.equal(sent.length,1);assert.equal(sent[0][0],6);
+  context.__responsiveMod.aim.targetPlayer=null;context.ρ̃५.angle=1;context.ϲ１٤=2000;vm.runInContext('ρ٨٨()',context);assert.equal(sent.length,1);assert.equal(sent[0][0],6);
+  context.__responsiveMod.settings.AimBotEnabled=false;context.ρ̃५.angle=1.5;context.ϲ１٤=3000;vm.runInContext('ρ٨٨()',context);assert.equal(sent.length,2);
 });
 
 test('large sparse IDs do not cause array scans during aim; ties keep original order',()=>{
@@ -110,4 +111,37 @@ test('large sparse IDs do not cause array scans during aim; ties keep original o
   f.api.trackPacket(13,0,7,390,500,true);assert.equal(target.prevX,history);assert.equal(history[0],400);
   f.api.trackPacket(13,0,7,0,0,false);f.api.aim.resolve();assert.equal(f.api.aim.targetPlayer.id,65000);
   f.api.aim.onDeath();f.api.aim.resolve();assert.equal(f.api.aim.targetPlayer,null);
+});
+
+test('bullet speed scales lead monotonically; line and sent angle use the same prediction',()=>{
+  const f=setup();f.packet([{pid:1,x:500,y:500},{pid:2,x:1000,y:500}]);f.packet([{pid:2,x:1000,y:520}]);
+  f.api.settings.lockId=2;const leads=[];
+  for(const speed of [1,2,4,8,15]){
+    f.api.setSetting('bulletSpeedCoefficient',speed);f.sent.length=0;f.tick();
+    const line=f.api.targets.lines[0],lead=line.y2-520;
+    assert.ok(lead>0);leads.push(lead);assert.equal(line.x1,500);assert.equal(line.y1,500);
+    // Use the actual distance, including the latest target Y.
+    const expected=(Math.hypot(500,20)/300*(4/speed)+.1)*20;
+    assert.ok(Math.abs(lead-expected)<1e-9);
+    assert.deepEqual(f.sent,[[6,(Math.round(Math.atan2(line.y2-line.y1,line.x2-line.x1)*180/Math.PI)+360)%360]]);
+  }
+  assert.ok(leads.every((value,i)=>i===0||value<leads[i-1]));
+});
+
+test('losing the cursor target clears the line and stops stale angle/autofire packets',()=>{
+  const f=setup();f.packet([{pid:1,x:500,y:500},{pid:2,x:800,y:500}]);f.packet([{pid:2,x:800,y:520}]);
+  f.api.targets.mouseMapCords={x:800,y:520};f.tick();assert.equal(f.api.aim.targetPlayer.id,2);
+  f.api.setSetting('autoFire',true);f.api.setSetting('mouseFov',1);f.api.targets.mouseMapCords={x:0,y:0};
+  f.sent.length=0;f.tick();assert.equal(f.api.aim.targetPlayer,null);assert.equal(f.sent.length,0);assert.equal(f.api.targets.lines[0].x1,-1);
+});
+
+test('ghoul UIDs are independent of player IDs and player clans',()=>{
+  const f=setup();f.packet([{pid:1,x:500,y:500},{pid:0,uid:1,type:13,x:600,y:500}]);
+  f.api.setSetting('target','ghouls');f.api.settings.mouseFovEnable=false;f.tick();assert.equal(f.api.aim.targetPlayer.id,1);assert.equal(f.api.aim.targetPlayer,f.api.targets.ghouls[1]);
+});
+
+test('invalid aim coefficients cannot introduce infinite or inverted predictions',()=>{
+  const f=setup();for(const [key,values]of Object.entries({distanceCoefficient:[0,-1,1001],bulletSpeedCoefficient:[0,-1,16],offsetCoefficient:[-1,4]})){
+    const previous=f.api.settings[key];for(const value of values)assert.throws(()=>f.api.setSetting(key,value));assert.equal(f.api.settings[key],previous);
+  }
 });
