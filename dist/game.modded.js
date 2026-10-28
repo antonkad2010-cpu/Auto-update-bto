@@ -926,6 +926,7 @@ function __installDevastMod(B) {
     if (!Object.prototype.hasOwnProperty.call(defaults, key) || typeof value !== typeof defaults[key]) throw new Error('Invalid setting: ' + key);
     if (typeof value === 'number' && !Number.isFinite(value)) throw new Error('Invalid numeric setting');
     MOD[key] = value;
+    if (key === 'PlayersListEnabled' && value) { listPage = 0; lastListUpdate = -Infinity; }
     if (key === 'SpamChatEnabled') {
       chatState.status = value ? 'Waiting for game' : 'Off';
       if (value) {
@@ -1020,7 +1021,7 @@ function __installDevastMod(B) {
     const rows = [];
     B.world.ᴎ︃ᄉ.forEach((meta, id) => {
       const name = nickname(id);
-      if (!meta || !name || id === 0) return;
+      if (!meta || typeof meta.ο̏︇ !== 'string' || id === 0) return;
       rows.push({id, name, clan: validClan(id)?.name || ''});
     });
     return rows;
@@ -1235,7 +1236,7 @@ function __installDevastMod(B) {
   }
   let lastOverlayLayout = -Infinity;
   let lastCollect = -Infinity;
-  let lastListUpdate = -Infinity, cachedPlayerRows = [];
+  let lastListUpdate = -Infinity, cachedPlayerRows = [], listPage = 0, listPageCount = 1;
   function ensureOverlay() {
     const can = view().ctx?.canvas || document.getElementById('can');
     if (!can) return false;
@@ -1282,8 +1283,9 @@ function __installDevastMod(B) {
       }
       overlayHost.shadowRoot.appendChild(functionList);
     }
-    functionList.style.display = MOD.showFunctionList ? 'grid' : 'none';
-    if (!MOD.showFunctionList) return;
+    const visible = MOD.showFunctionList && !MOD.PlayersListEnabled;
+    functionList.style.display = visible ? 'grid' : 'none';
+    if (!visible) return;
     const height = parseFloat(overlayHost.style.height) || window.innerHeight, rows = Math.ceil(functionRows.size / 2), font = Math.max(8, Math.min(14, (height - 16) / rows - 3)), line = Math.ceil(font + 3);
     functionList.style.fontSize = font + 'px';
     functionList.style.lineHeight = line + 'px';
@@ -1365,23 +1367,51 @@ function __installDevastMod(B) {
       }
     }
     ctx.globalAlpha = 1;
-    if (MOD.PlayersListEnabled) {
-      ctx.fillStyle = 'rgba(0,0,0,.8)';
-      ctx.fillRect(0, 0, overlay.width, overlay.height);
-      const now = performance.now();
-      if (now - lastListUpdate >= 250) { cachedPlayerRows = playerRows(); lastListUpdate = now; }
-      const columns = Math.max(1, Math.floor(overlay.width / 260));
-      const rowsPerColumn = Math.max(1, Math.floor((overlay.height - 70) / 22));
-      let i = 0;
-      for (const {id, name, clan} of cachedPlayerRows.slice(0, columns * rowsPerColumn)) {
-        const col = Math.floor(i / rowsPerColumn), row = i % rowsPerColumn;
-        const width = overlay.width / columns;
-        ctx.save(); ctx.beginPath(); ctx.rect(col * width, 0, width, overlay.height); ctx.clip();
-        text('#' + id + ' ' + name + (clan ? ' [' + clan + ']' : ' [No clan]'), (col + .5) * width, 35 + row * 22, clanColor(id), 13);
-        ctx.restore(); i++;
+    if (MOD.PlayersListEnabled) drawPlayerList();
+    ctx.restore();
+  }
+  function drawPlayerList() {
+    const now = performance.now();
+    if (now - lastListUpdate >= 250) { cachedPlayerRows = playerRows(); lastListUpdate = now; }
+    const scale = overlay.width / (parseFloat(overlayHost.style.width) || overlay.width);
+    const width = overlay.width / scale, height = overlay.height / scale;
+    const margin = Math.min(20, width / 20), gap = 12, top = 66, rowHeight = 52;
+    const columns = Math.max(1, Math.floor((width - margin * 2 + gap) / 380));
+    const columnWidth = (width - margin * 2 - gap * (columns - 1)) / columns;
+    const rows = Math.max(1, Math.floor((height - top - 44) / rowHeight));
+    const capacity = columns * rows;
+    listPageCount = Math.max(1, Math.ceil(cachedPlayerRows.length / capacity));
+    listPage = Math.min(listPage, listPageCount - 1);
+    ctx.save(); ctx.scale(scale, scale);
+    ctx.fillStyle = '#070c16'; ctx.fillRect(0, 0, width, height);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    function label(value, x, y, color, font, available) {
+      ctx.font = font; ctx.fillStyle = color;
+      let content = String(value);
+      if (available != null && ctx.measureText(content).width > available) {
+        const characters = Array.from(content);
+        while (characters.length && ctx.measureText(characters.join('') + '…').width > available) characters.pop();
+        content = characters.join('') + '…';
       }
-      text('Players: ' + cachedPlayerRows.length, overlay.width - 100, overlay.height - 22);
+      ctx.fillText(content, x, y);
     }
+    label('Игроки · ' + cachedPlayerRows.length, margin, 36, '#ffffff', 'bold 24px sans-serif');
+    let index = 0;
+    for (const {id, name, clan} of cachedPlayerRows.slice(listPage * capacity, (listPage + 1) * capacity)) {
+      const col = Math.floor(index / rows), row = index % rows;
+      const x = margin + col * (columnWidth + gap), y = top + row * rowHeight;
+      ctx.fillStyle = row % 2 ? '#172233' : '#111b2a';
+      ctx.fillRect(x, y - 22, columnWidth, rowHeight - 4);
+      const idLabel = '#' + id;
+      label(idLabel, x + 12, y, '#91cfff', 'bold 16px sans-serif');
+      const nameX = x + 24 + ctx.measureText(idLabel).width;
+      label(name || 'Без ника', nameX, y, '#ffffff', 'bold 20px sans-serif', x + columnWidth - 12 - nameX);
+      label(clan ? '[' + clan + ']' : 'Без клана', nameX, y + 20,
+        clan ? clanColor(id) : '#94a3b8', '15px sans-serif', x + columnWidth - 12 - nameX);
+      index++;
+    }
+    label('Страница ' + (listPage + 1) + ' / ' + listPageCount +
+      (listPageCount > 1 ? ' · Колесо мыши — листать' : ''), margin, height - 18, '#c0ccdd', '14px sans-serif');
     ctx.restore();
   }
   const reconnect = {
@@ -1594,6 +1624,10 @@ function __installDevastMod(B) {
       if (e.ctrlKey || !Number.isFinite(e.deltaY) || e.deltaY === 0) return;
       e.preventDefault();
       e.stopImmediatePropagation();
+      if (MOD.PlayersListEnabled) {
+        listPage = Math.max(0, Math.min(listPageCount - 1, listPage + Math.sign(e.deltaY)));
+        return;
+      }
       const delta = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? canvas.getBoundingClientRect().height : 1);
       MOD.zoomFactor = Math.max(.33, Math.min(2, MOD.zoomFactor * Math.exp(-Math.max(-100, Math.min(100, delta)) * .001)));
       zoomControl?.updateDisplay();
