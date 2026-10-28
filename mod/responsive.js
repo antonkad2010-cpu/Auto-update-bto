@@ -47,8 +47,8 @@ function __installDevastMod(B) {
       this.hit = true;
       this.ShowPosition = true;
       this.ShowNamesOnMap = true;
-      this.KarmaAboveHead = true;
-      this.ShowGauges = true;
+      this.KarmaAboveHead = false;
+      this.ShowGauges = false;
       this.TeamClanColor = "#83F6A4";
       this.EnemyClanColor = "#FF0000";
       this.AutoOpenSlotsInv = true;
@@ -147,6 +147,8 @@ function __installDevastMod(B) {
     }
   } catch (_) {}
   MOD.zoomFactor = 1;
+  MOD.ShowGauges = false;
+  MOD.KarmaAboveHead = false;
   if (MOD.SAutoLootEnabled) MOD.FAutoLootEnabled = false;
   const lootItems = [{
     "name": "smallwood",
@@ -813,7 +815,6 @@ function __installDevastMod(B) {
   }
   const GetAllTargets = new GetAllTargetsCon();
   const Aimbot = new AimbotCon();
-  const _players_list = [];
   const removers = [];
   const originalSender = B.network.ᴎᚂρ.bind(B.network);
   const originals = {};
@@ -984,18 +985,16 @@ function __installDevastMod(B) {
     const known = playerLabelCache.get(meta);
     if (!Number.isInteger(id)) id = known ? known.id : B.world.ᴎ︃ᄉ.indexOf(meta);
     const name = String(meta?.ο̏︇ || '');
-    return MOD.ShowNamesOnMap && Number.isInteger(id) && id > 0 ? name + ' #' + id : name;
+    return MOD.ShowNamesOnMap && Number.isInteger(id) && id > 0 ? (name ? name + ' #' : '#') + id : name;
   }
   function preparePlayerLabel(meta, id) {
-    const signature = String(MOD.ShowNamesOnMap) + '|' + id + '|' + String(meta.ο̏︇ || '');
-    if (playerLabelCache.get(meta)?.signature !== signature) {
-      meta.а༠٥ = null;
-      playerLabelCache.set(meta, {
-        id,
-        signature
-      });
+    const cached = playerLabelCache.get(meta), name = meta.ο̏︇, color = clanColor(id);
+    if (!cached || cached.id !== id || cached.name !== name || cached.color !== color || cached.show !== MOD.ShowNamesOnMap) {
+      meta.εⲅᄄ = null;
+      playerLabelCache.set(meta, {id, name, color, show:MOD.ShowNamesOnMap});
     }
   }
+
   function zoomOffset(nativeOffset) {
     const base = Number.isFinite(nativeOffset) ? nativeOffset : 0;
     return Math.max(-.95, Math.min(3, (1 + base) * MOD.zoomFactor - 1));
@@ -1015,10 +1014,10 @@ function __installDevastMod(B) {
   }
   const clanTagColors = new WeakMap();
   function prepareClanTag(clan, id) {
-    const color = clanColor(id);
-    if (clanTagColors.get(clan) !== color) {
-      clan.ᴌ५ᚂ = null;
-      clanTagColors.set(clan, color);
+    const color = clanColor(id), previous = clanTagColors.get(clan);
+    if (!previous || previous.color !== color || previous.name !== clan.name || previous.generation !== clan.ոᚄރ) {
+      clan.Ꮷ८ᚅ = null;
+      clanTagColors.set(clan, {color, name:clan.name, generation:clan.ոᚄރ});
     }
   }
   function collect() {
@@ -1035,9 +1034,6 @@ function __installDevastMod(B) {
       }
     }
     return result;
-  }
-  function updateTargets() {
-    for (const {type, e} of records) if (type === B.categories.player && playerMeta(e.ᴘ४１) && typeof playerMeta(e.ᴘ४１).ο̏︇ === 'string') _players_list[e.ᴘ४１] = playerMeta(e.ᴘ४１).ο̏︇;
   }
   function view() {
     const v = B.view(), ratio = B.graphics.options && B.graphics.options.еߎ༢;
@@ -1159,7 +1155,7 @@ function __installDevastMod(B) {
     });
   }
   function building(r) {
-    if ([B.categories.player, B.categories.loot, 13].includes(r.type)) return null;
+    if (r.type === B.categories.player || r.type === B.categories.loot || r.type === 13) return null;
     const descriptor = B.items[r.e.Іࡈ５ >> 7];
     return descriptor && Number.isInteger(descriptor.ࡀ︂̄) && descriptor.ࡀ︂̄ > 0 ? descriptor : null;
   }
@@ -1237,7 +1233,11 @@ function __installDevastMod(B) {
       row.style.textShadow = on ? '0 0 7px rgba(255,255,0,.9)' : 'none';
     }
   }
-  function draw() {
+  let lastOverlayDraw = -Infinity;
+  function draw(now = performance.now()) {
+    // Overlay work is capped at 30 Hz; the native game render loop is untouched.
+    if (now - lastOverlayDraw < 1000 / 30) return;
+    lastOverlayDraw = now;
     if (!playing()) {
       if (ctx && overlay) ctx.clearRect(0, 0, overlay.width, overlay.height);
       if (functionList) functionList.style.display = 'none';
@@ -1264,17 +1264,11 @@ function __installDevastMod(B) {
     }
     ctx.save();
     if (MOD.ShowPosition) text('[' + Math.floor(me.x / 100) + ':' + Math.floor(me.y / 100) + ']', 100, 32, '#fff', 18);
-    if (MOD.ShowGauges) {
-      const gauges = B.world.ᴘρࡀ;
-      if (gauges) {
-        const pairs = [['HP', gauges.ᴇ༤ᚆ], ['Food', gauges.ոߎᚉ], ['Water', gauges.օᴑ̸], ['Warmth', gauges.ᴏ︀ރ]];
-        text(pairs.filter(x => x[1] && Number.isFinite(x[1].value)).map(x => x[0] + ': ' + Math.floor(x[1].value)).join('  '), overlay.width / 2, overlay.height - 24);
-      }
-    }
+    const hoverX = Math.floor(GetAllTargets.mouseMapCords.x / 100), hoverY = Math.floor(GetAllTargets.mouseMapCords.y / 100);
     for (const r of records) {
       if (r.type === B.categories.player) {
+        if (!MOD.ShowPlayerHitbox) continue;
         const id = r.e.ᴘ४１, p = at(r.e), self = id === me.id, color = self && !validClan(id) ? '#00ffff' : clanColor(id);
-        if (MOD.ShowNamesOnMap && !B.nativePlayerLabels && Number.isInteger(id) && id > 0 && p.x > -100 && p.y > -100 && p.x < overlay.width + 100 && p.y < overlay.height + 100) text('#' + id, p.x, p.y - 56 * v.scale, color, Math.max(10, 14 * v.scale));
         if (MOD.ShowPlayerHitbox) {
           ctx.strokeStyle = color;
           ctx.lineWidth = 2;
@@ -1284,13 +1278,8 @@ function __installDevastMod(B) {
           ctx.strokeRect(p.x - 30 * v.scale, p.y - 30 * v.scale, 60 * v.scale, 60 * v.scale);
 
         }
-        if (MOD.KarmaAboveHead) {
-          const meta = playerMeta(id), sprite = meta && B.karma[meta.ᴑᴄ̉];
-          if (sprite && B.graphics.ᴑ̸ᴘ) B.graphics.ᴑ̸ᴘ(sprite, v.x + r.e.x, v.y + r.e.y - 85, 0, 0, 0, 0.6);
-        }
-      } else if (MOD.ShowBuildingOwner && building(r)) {
-        const x = Math.floor(GetAllTargets.mouseMapCords.x / 100), y = Math.floor(GetAllTargets.mouseMapCords.y / 100);
-        if (r.e.αބ̞ === x && r.e.ᴀܛ٤ === y) {
+      } else if (MOD.ShowBuildingOwner && r.e.αބ̞ === hoverX && r.e.ᴀܛ٤ === hoverY && building(r)) {
+        {
           const p = at(r.e), id = r.e.ᴘ४１;
           text((nickname(id) || 'Owner') + ' #' + id, p.x, p.y - 35, clanColor(id), 16);
         }
@@ -1303,7 +1292,7 @@ function __installDevastMod(B) {
         const start = at({x:line.x1, y:line.y1});
         const end = at({x:line.x2, y:line.y2});
         ctx.globalAlpha = line.alpha;
-        ctx.strokeStyle = line.color;
+        ctx.strokeStyle = i === 0 ? MOD.visualizeResolvingColor : line.color;
         ctx.lineWidth = line.width;
         ctx.beginPath();
         ctx.moveTo(start.x, start.y);
@@ -1419,7 +1408,6 @@ function __installDevastMod(B) {
         Aimbot.onDeath();
         previousPlayer = 0;
         records = [];
-        _players_list.length = 0;
       }
       chatState.status = MOD.SpamChatEnabled ? 'Waiting for game' : 'Off';
       draw();
@@ -1435,7 +1423,6 @@ function __installDevastMod(B) {
     }
     if (now - lastCollect >= 50) {
       records = collect();
-      updateTargets();
       lastCollect = now;
     }
     updateMouse();
@@ -1554,7 +1541,7 @@ function __installDevastMod(B) {
       return c;
     }
     const visual = menu.addFolder('Visuals');
-    for (const key of ['ShowPosition', 'ShowGauges', 'ShowNamesOnMap', 'ShowMines', 'ShowPlayerHitbox', 'KarmaAboveHead', 'ShowBuildingOwner', 'XrayBuildings', 'PlayersListEnabled', 'showFunctionList']) add(visual, key);
+    for (const key of ['ShowPosition', 'ShowNamesOnMap', 'ShowMines', 'ShowPlayerHitbox', 'ShowBuildingOwner', 'XrayBuildings', 'PlayersListEnabled', 'showFunctionList']) add(visual, key);
     add(visual, 'Xraytransparency', 'Building opacity', .05, 1, .05);
     for (const key of ['TeamClanColor', 'EnemyClanColor']) visual.addColor(MOD, key).onChange(persist);
     const aim = menu.addFolder('Aim bot');

@@ -1,6 +1,6 @@
 var __responsiveView = {x:0,y:0,scale:1,ctx:а०̅};
 var __responsiveMod = __installDevastMod({
-  synchronizedRender:false,nativePlayerLabels:false,
+  synchronizedRender:false,nativePlayerLabels:true,
   types:εᚇ๓,world:еܞ︌,network:о̃༩,input:ρ̃५,entities:ι‌̵,
   renderer:ᴇ️̅,items:ιᄅᴄ,graphics:ᴘᚉ٦,karma:ᴉ२ߋ,
   categories:{loot:ρⲅ̶,player:ιܒ̷,projectile:ⲟ２ܖ},
