@@ -1356,7 +1356,7 @@ function __installDevastMod(B) {
     listPageCount = Math.max(1, Math.ceil(cachedPlayerRows.length / capacity));
     listPage = Math.min(listPage, listPageCount - 1);
     ctx.save(); ctx.scale(scale, scale);
-    ctx.fillStyle = '#070c16'; ctx.fillRect(0, 0, width, height);
+    ctx.fillStyle = 'rgba(7,12,22,.22)'; ctx.fillRect(0, 0, width, height);
     ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
     function label(value, x, y, color, font, available) {
       ctx.font = font; ctx.fillStyle = color;
@@ -1373,7 +1373,7 @@ function __installDevastMod(B) {
     for (const {id, name, clan} of cachedPlayerRows.slice(listPage * capacity, (listPage + 1) * capacity)) {
       const col = Math.floor(index / rows), row = index % rows;
       const x = margin + col * (columnWidth + gap), y = top + row * rowHeight;
-      ctx.fillStyle = row % 2 ? '#172233' : '#111b2a';
+      ctx.fillStyle = row % 2 ? 'rgba(23,34,51,.42)' : 'rgba(17,27,42,.34)';
       ctx.fillRect(x, y - 22, columnWidth, rowHeight - 4);
       const idLabel = '#' + id;
       label(idLabel, x + 12, y, '#91cfff', 'bold 16px sans-serif');
