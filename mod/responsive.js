@@ -105,7 +105,8 @@ function __installDevastMod(B) {
     constructor(id) { this.id=id; this.x=-1; this.y=-1; this.prevX=[-1,-1,-1]; this.prevY=[-1,-1,-1]; this.active=false; this.weapon=-1; this.gear=-1; }
     update(x,y) {
       if (!Number.isFinite(x) || !Number.isFinite(y)) return;
-      this.prevX=[this.x,...this.prevX.slice(0,2)]; this.prevY=[this.y,...this.prevY.slice(0,2)];
+      this.prevX[2]=this.prevX[1]; this.prevX[1]=this.prevX[0]; this.prevX[0]=this.x;
+      this.prevY[2]=this.prevY[1]; this.prevY[1]=this.prevY[0]; this.prevY[0]=this.y;
       this.x=x; this.y=y; this.active=true;
     }
     setInactive() { this.x=-1; this.y=-1; this.prevX.fill(-1); this.prevY.fill(-1); this.active=false; GetAllTargets.resetLines(); }
@@ -118,7 +119,11 @@ function __installDevastMod(B) {
     constructor() { this.lastAngle = 0; this.targetPlayer = null; this.mouseDown = false; }
     onDeath() {
       this.targetPlayer = null; this.mouseDown = false; GetAllTargets.lastId = 0;
-      for (const target of [...GetAllTargets.players, ...GetAllTargets.ghouls]) if (target && target.active) target.setInactive();
+      for (const group of [activePlayers, activeGhouls]) {
+        for (const target of group.values()) target.setInactive();
+        group.clear();
+      }
+      activePlayerCache = activeGhoulCache = null;
       GetAllTargets.lines.forEach(line => line.reset(-1, -1, -1, -1));
     }
     isDead() { return !B.world.ᅠᏧ‍ || B.world.ᅠᏧ‍.id === 0; }
@@ -800,6 +805,12 @@ function __installDevastMod(B) {
     const saved = JSON.parse(localStorage.getItem(SAVE + ':loot') || '{}');
     for (const key of Object.keys(LootData)) if (typeof saved[key] === 'boolean') LootData[key].acquire = saved[key];
   } catch (_) {}
+  const activePlayers = new Map(), activeGhouls = new Map();
+  let activePlayerCache = null, activeGhoulCache = null;
+  function activeTargets(players) {
+    if (players) return activePlayerCache || (activePlayerCache = [...activePlayers.values()].sort((a,b)=>a.id-b.id));
+    return activeGhoulCache || (activeGhoulCache = [...activeGhouls.values()].sort((a,b)=>a.id-b.id));
+  }
   const GetAllTargets = new GetAllTargetsCon();
   const Aimbot = new AimbotCon();
   const _players_list = [];
@@ -909,8 +920,8 @@ function __installDevastMod(B) {
         if (distance < nearest) { selected = target; nearest = distance; }
       }
     };
-    if (MOD.target === 'players' || MOD.target === 'all') consider(GetAllTargets.players);
-    if (MOD.target === 'ghouls' || MOD.target === 'all') consider(GetAllTargets.ghouls);
+    if (MOD.target === 'players' || MOD.target === 'all') consider(activeTargets(true));
+    if (MOD.target === 'ghouls' || MOD.target === 'all') consider(activeTargets(false));
     return selected;
   };
   Aimbot.resolve = function () {
@@ -940,8 +951,18 @@ function __installDevastMod(B) {
     const id = type === B.categories.player ? playerId : uid;
     if (!group || !Number.isInteger(id) || id < 1 || id > 65535) return;
     if (!group[id]) group[id] = new GetTarget(id);
-    if (!active) { group[id].setInactive(); GetAllTargets.lines.forEach(line => line.reset(-1,-1,-1,-1)); return; }
-    if (Number.isFinite(x) && Number.isFinite(y)) group[id].update(x, y);
+    const players = type === B.categories.player, index = players ? activePlayers : activeGhouls;
+    if (!active) {
+      if (index.delete(id)) { if (players) activePlayerCache = null; else activeGhoulCache = null; }
+      group[id].setInactive(); return;
+    }
+    if (Number.isFinite(x) && Number.isFinite(y)) {
+      group[id].update(x, y);
+      if (!index.has(id)) {
+        index.set(id, group[id]);
+        if (players) activePlayerCache = null; else activeGhoulCache = null;
+      }
+    }
   }
   function playerMeta(id) {
     return B.world.ᴎ︃ᄉ[id];
@@ -1275,10 +1296,7 @@ function __installDevastMod(B) {
         }
       }
     }
-    const selfRecord = records.find(r => r.type === B.categories.player && r.e.ᴘ४１ === me.id);
-    if (MOD.AimBotEnabled && selfRecord) {
-      const ownPosition = at(selfRecord.e);
-      text('AIM BOT', ownPosition.x, ownPosition.y - 75 * v.scale, '#ad00e3', 20 * v.scale);
+    if (MOD.AimBotEnabled) {
       for (const [i, line] of GetAllTargets.lines.entries()) {
         if (i === 0 && !MOD.visualizeResolving) continue;
         if (![line.x1, line.y1, line.x2, line.y2].every(Number.isFinite) || line.x1 === -1 && line.y1 === -1 && line.x2 === -1 && line.y2 === -1) continue;

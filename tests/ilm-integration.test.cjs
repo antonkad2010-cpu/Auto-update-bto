@@ -97,3 +97,17 @@ test('native angle functions update their cache while only their send is suppres
   assert.equal(context.օ‌އ,.5);assert.equal(context.о̟̏,1000);assert.equal(sent.length,0);
   context.__responsiveMod.settings.AimBotEnabled=false;context.ρ̃५.angle=1;context.ϲ１٤=2000;vm.runInContext('ρ٨٨()',context);assert.equal(sent.length,1);assert.equal(sent[0][0],6);
 });
+
+test('large sparse IDs do not cause array scans during aim; ties keep original order',()=>{
+  const f=setup();
+  f.api.trackPacket(0,1,0,500,500,true);
+  f.api.trackPacket(13,0,65000,600,500,true);
+  f.api.trackPacket(13,0,7,400,500,true);
+  f.api.settings.target='ghouls';f.api.settings.mouseFovEnable=false;
+  f.api.targets.ghouls[Symbol.iterator]=()=>{throw Error('scanned sparse ghoul array')};
+  f.api.aim.resolve();assert.equal(f.api.aim.targetPlayer.id,7);
+  const target=f.api.targets.ghouls[7],history=target.prevX;
+  f.api.trackPacket(13,0,7,390,500,true);assert.equal(target.prevX,history);assert.equal(history[0],400);
+  f.api.trackPacket(13,0,7,0,0,false);f.api.aim.resolve();assert.equal(f.api.aim.targetPlayer.id,65000);
+  f.api.aim.onDeath();f.api.aim.resolve();assert.equal(f.api.aim.targetPlayer,null);
+});
