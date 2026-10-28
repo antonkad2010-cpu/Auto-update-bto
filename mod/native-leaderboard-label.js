@@ -1,0 +1,1 @@
+function εⲥߏ(ᅠᏧ‍ , ᴉ̵ᄂ){return ᴏࡁᄀ.а١༠((__responsiveMod?__responsiveMod.leaderboardLabel(ᅠᏧ‍):ᅠᏧ‍.ο̏︇),"\47\126\x69\x67\u0061\47\x2c\x20\163\x61\x6e\x73\55\163e\162\x69\x66",ᴉ̵ᄂ , 050,ⲥ८๘ ,undefined,ᴇᴘܓ,12,а̉ᴑ,undefined,undefined,ⲣ︊̉,Ꮷո̉,undefined,undefined,undefined,ε̷٢ ) ;}

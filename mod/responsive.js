@@ -987,6 +987,11 @@ function __installDevastMod(B) {
     const name = String(meta?.ο̏︇ || '');
     return MOD.ShowNamesOnMap && Number.isInteger(id) && id > 0 ? (name ? name + ' #' : '#') + id : name;
   }
+  function leaderboardLabel(meta) {
+    const name = typeof meta?.ο̏︇ === 'string' ? meta.ο̏︇ : '';
+    const id = meta?.id;
+    return Number.isInteger(id) && id > 0 ? (name ? name + ' #' : '#') + id : name;
+  }
   function preparePlayerLabel(meta, id) {
     const cached = playerLabelCache.get(meta), name = meta.ο̏︇, color = clanColor(id);
     if (!cached || cached.id !== id || cached.name !== name || cached.color !== color || cached.show !== MOD.ShowNamesOnMap) {
@@ -1708,6 +1713,7 @@ function __installDevastMod(B) {
     clanColor,
     prepareClanTag,
     playerLabel,
+    leaderboardLabel,
     playerRows,
     preparePlayerLabel,
     zoomOffset,
