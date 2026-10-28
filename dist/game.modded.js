@@ -1373,10 +1373,13 @@ function __installDevastMod(B) {
     armed: false,
     next: 0,
     pending: false,
-    generation: 0
+    generation: 0,
+    lastState: null
   };
   function updateReconnect(now) {
     const n = B.network;
+    const previousState = reconnect.lastState;
+    reconnect.lastState = n.state;
     if (n.state === 1) {
       reconnect.status = 'Connected';
       reconnect.attempts = 0;
@@ -1388,7 +1391,14 @@ function __installDevastMod(B) {
     }
     if ((n.state & 2) !== 0) {
       reconnect.armed = true;
-      reconnect.pending = false;
+      // A new manual login gets its own retry budget. An in-flight refresh
+      // keeps its lock until its callback or deadline; frame ticks cannot
+      // turn one login into overlapping requests.
+      if ((previousState === null || (previousState & 2) === 0) && !reconnect.pending) {
+        reconnect.attempts = 0;
+        reconnect.next = 0;
+        reconnect.generation++;
+      }
     }
     if (n.state !== 64 || !reconnect.armed || stopped) return;
     if (typeof n.ⲅ︊ᄃ !== 'function' || typeof B.reconnect !== 'function') return;

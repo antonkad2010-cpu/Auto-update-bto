@@ -84,3 +84,22 @@ test('player list uses current nicknames and valid clan generation, including pl
   B.world.ᴎ︃ᄉ[1].ο̏︇=0;
   assert.equal(api.playerRows().length,2);
 });
+
+
+test('manual login after exhausted retries receives a fresh retry budget',()=>{
+  const f=fixture();f.api.step(0);f.network.state=64;f.api.step(100);
+  f.api.reconnect.attempts=3;f.api.step(1000);assert.equal(f.retries,0);
+  f.network.state=2;f.api.step(1100);assert.equal(f.api.reconnect.attempts,0);
+  f.network.state=64;f.api.step(1200);f.api.step(2201);assert.equal(f.retries,1);
+});
+
+test('connecting frame ticks do not unlock a pending server refresh or run stale callbacks',()=>{
+  const f=fixture();let callback;f.network.ⲅ︊ᄃ=(url,cb)=>{callback=cb};
+  f.api.step(0);f.network.state=64;f.api.step(100);f.api.step(1101);
+  assert.equal(f.api.reconnect.pending,true);
+  f.network.state=2;f.api.step(1200);f.api.step(1250);
+  assert.equal(f.api.reconnect.pending,true);
+  f.network.state=64;f.api.step(1300);assert.equal(f.api.reconnect.attempts,1);
+  f.api.step(14000);assert.equal(f.api.reconnect.pending,false);
+  callback();assert.equal(f.retries,0);
+});
