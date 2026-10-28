@@ -1235,8 +1235,8 @@ function __installDevastMod(B) {
   }
   let lastOverlayDraw = -Infinity;
   function draw(now = performance.now()) {
-    // Overlay work is capped at 30 Hz; the native game render loop is untouched.
-    if (now - lastOverlayDraw < 1000 / 30) return;
+    // Keep aim feedback at the previous render cadence; throttle only when aim is off.
+    if (!MOD.AimBotEnabled && now - lastOverlayDraw < 1000 / 30) return;
     lastOverlayDraw = now;
     if (!playing()) {
       if (ctx && overlay) ctx.clearRect(0, 0, overlay.width, overlay.height);
