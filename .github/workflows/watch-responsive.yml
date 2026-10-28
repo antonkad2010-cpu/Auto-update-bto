@@ -22,6 +22,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Install pinned parser
+        run: npm ci --ignore-scripts
       - name: Check and build only a verified version
         run: python tools/watch_game.py --once
       - name: Upload status and build

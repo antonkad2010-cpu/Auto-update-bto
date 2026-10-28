@@ -38,15 +38,23 @@ def check(output):
         source = json.loads((work / 'manifest.json').read_text(encoding='utf-8'))
         info = {'source_url': source['source_url'], 'source_sha256': source['sha256'],
                 'checked_at': int(time.time())}
-        if source['sha256'] != expected:
-            atomic_json(output / 'status.json', {**info, 'status': 'new_version_needs_remapping',
-                        'message': 'New game version detected; existing bindings are not verified for it.'})
-            return False
+        manifest = MANIFEST
+        remapped = source['sha256'] != expected
+        if remapped:
+            manifest = work / 'remapped.json'
+            try:
+                run(['node', 'tools/remap.cjs', 'baselines/current.js.gz',
+                     str(work / 'game.current.js'), str(MANIFEST), str(manifest)])
+            except RuntimeError as error:
+                atomic_json(output / 'status.json', {**info, 'status': 'new_version_needs_remapping',
+                            'message': str(error)})
+                return False
         product, report = work / 'game.modded.js', work / 'report.json'
         run([sys.executable, '-m', 'unittest', 'discover', '-s', 'tests', '-p', 'test_*.py'])
         run(['node', '--test', 'tests/responsive.test.cjs', 'tests/ilm-integration.test.cjs'])
+        run(['node', '--test', 'tests/remap.test.cjs'])
         run([sys.executable, 'tools/apply_patches.py', '--base', str(work / 'game.current.js'),
-             '--manifest', str(MANIFEST), '--output', str(product), '--report', str(report)])
+             '--manifest', str(manifest), '--output', str(product), '--report', str(report)])
         run(['node', '--check', str(product)])
         data = product.read_bytes()
         temporary = output / '.game.modded.js.tmp'
@@ -54,6 +62,7 @@ def check(output):
         os.replace(temporary, output / 'game.modded.js')
         atomic_json(output / 'report.json', json.loads(report.read_text(encoding='utf-8')))
         atomic_json(output / 'status.json', {**info, 'status': 'verified_bindings',
+                    'automatically_remapped': remapped,
                     'output_sha256': hashlib.sha256(data).hexdigest(),
                     'message': 'Static checks passed; live gameplay was not tested.'})
         return True

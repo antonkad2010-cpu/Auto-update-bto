@@ -14,6 +14,8 @@ spec.loader.exec_module(watch)
 class WatchGameTests(unittest.TestCase):
     def test_unknown_version_is_reported_without_publishing(self):
         def fake_run(command):
+            if 'tools/remap.cjs' in command:
+                raise RuntimeError('Semantic change refused')
             self.assertIn('tools/fetch_current.py', command)
             work = Path(command[command.index('--out') + 1])
             (work / 'manifest.json').write_text(json.dumps({'source_url': 'https://devast.io/js/new.js', 'sha256': 'a' * 64}))
@@ -40,3 +42,23 @@ class WatchGameTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+class AutoRemappingTests(unittest.TestCase):
+    def test_changed_version_uses_generated_manifest_before_publication(self):
+        commands = []
+        def fake_run(command):
+            commands.append(command)
+            if 'tools/fetch_current.py' in command:
+                work = Path(command[command.index('--out') + 1])
+                (work / 'manifest.json').write_text(json.dumps({'source_url': 'https://devast.io/js/new.js', 'sha256': 'b'*64}))
+            elif 'tools/remap.cjs' in command:
+                Path(command[-1]).write_text('{}')
+            elif 'tools/apply_patches.py' in command:
+                self.assertEqual(Path(command[command.index('--manifest')+1]).name, 'remapped.json')
+                Path(command[command.index('--output')+1]).write_text('/* mapped */')
+                Path(command[command.index('--report')+1]).write_text('{}')
+        with tempfile.TemporaryDirectory() as tmp, patch.object(watch,'run',side_effect=fake_run):
+            self.assertTrue(watch.check(Path(tmp)))
+            status=json.loads((Path(tmp)/'status.json').read_text())
+            self.assertTrue(status['automatically_remapped'])
+            self.assertTrue(any('tests/remap.test.cjs' in command for command in commands))

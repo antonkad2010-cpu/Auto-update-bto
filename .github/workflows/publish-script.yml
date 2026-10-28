@@ -27,6 +27,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Install pinned parser
+        run: npm ci --ignore-scripts
       - name: Check upstream and build
         id: check
         continue-on-error: true
