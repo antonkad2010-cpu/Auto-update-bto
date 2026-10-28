@@ -6,7 +6,7 @@ const source = fs.readFileSync(require('node:path').join(__dirname, '../mod/resp
 function fixture() {
   let retries=0, refreshes=0;
   const row=['osakasurvival1','Osaka',1,1,'osaka',0,'survival'];
-  const network={state:2,ԁᴄࡃ:row,ոߒ४:[row],ᴎᚂρ(){},ѕ᠋༢(){},ρ٨٨(){},ⲅ︊ᄃ(url,cb){refreshes++;cb()}};
+  const network={state:2,ԁᴄࡃ:row,ոߒ४:[row],ᴎᚂρ(){},ѕ᠋༢(){},ρ٨٨(){},ⲅ︊ᄃ(url,cb){assert.equal(url,"https://devast.io/list");refreshes++;cb()}};
   const window={addEventListener(){},removeEventListener(){},requestAnimationFrame(){return 1},setInterval(){return 1},clearInterval(){},cancelAnimationFrame(){}};
   const document={readyState:'loading',getElementById(){return null}};
   const localStorage={getItem(){return null},setItem(){},removeItem(){throw Error('unexpected deletion')}};
@@ -62,7 +62,7 @@ test('ILM target selection, angles and auto fire match extracted original',()=>{
 
 test('migration restores ILM aim defaults without resetting other settings',()=>{
   const data=new Map([['BestModMenuConfig',JSON.stringify({distanceCoefficient:100,AimbotKey:'KeyZ',AutoTakeEnabled:true})]]);
-  const localStorage={getItem:k=>data.get(k)||null,setItem:(k,v)=>data.set(k,v)};
+  const localStorage={getItem:k=>data.get(k)||null,setItem:(k,v)=>data.set(k,v),removeItem:k=>data.delete(k)};
   const window={addEventListener(){},removeEventListener(){},requestAnimationFrame(){return 1},setInterval(){return 1},clearInterval(){}};
   const B={network:{state:0,ᴎᚂρ(){},ѕ᠋༢(){},ρ٨٨(){}},world:{}};
   const ctx=vm.createContext({window,document:{readyState:'loading',getElementById(){return null}},localStorage,performance:{now:()=>0},console,B});
@@ -102,4 +102,28 @@ test('connecting frame ticks do not unlock a pending server refresh or run stale
   f.network.state=64;f.api.step(1300);assert.equal(f.api.reconnect.attempts,1);
   f.api.step(14000);assert.equal(f.api.reconnect.pending,false);
   callback();assert.equal(f.retries,0);
+});
+
+
+test('legacy mod settings migrate without touching survivor or account credentials',()=>{
+  const data=new Map([['BestModMenuConfig',JSON.stringify({distanceCoefficient:420,AimbotKey:'KeyZ'})],['BestModMenuConfig:ilm1','1'],['BestModMenuConfig:loot','{"smallwood":true}'],['token','saved-token'],['tokenId','12'],['userId','31'],['accountToken','saved-account']]);
+  const writes=[],deleted=[];const localStorage={getItem:k=>data.get(k)??null,setItem:(k,v)=>{writes.push(k);data.set(k,v)},removeItem:k=>{deleted.push(k);data.delete(k)}};
+  const B={network:{state:0,ᴎᚂρ(){},ѕ᠋༢(){},ρ٨٨(){}},world:{}};
+  const context=vm.createContext({B,window:{addEventListener(){},requestAnimationFrame(){},setInterval(){}},document:{readyState:'loading',getElementById(){}},localStorage,performance:{now:()=>0},console});
+  const api=vm.runInContext(source+'\n__installDevastMod(B)',context);
+  assert.equal(api.settings.distanceCoefficient,420);assert.equal(api.settings.AimbotKey,'KeyZ');
+  assert.equal(data.get('DevastClientPreferences:loot'),'{"smallwood":true}');
+  assert.deepEqual(deleted,['BestModMenuConfig','BestModMenuConfig:ilm1','BestModMenuConfig:loot']);
+  assert.ok(writes.every(k=>k.startsWith('DevastClientPreferences')));
+  assert.equal(data.get('token'),'saved-token');assert.equal(data.get('tokenId'),'12');assert.equal(data.get('userId'),'31');assert.equal(data.get('accountToken'),'saved-account');
+});
+
+test('migration keeps every legacy entry if copying to the new namespace fails',()=>{
+  const data=new Map([['BestModMenuConfig','{"distanceCoefficient":420}'],['BestModMenuConfig:ilm1','1'],['BestModMenuConfig:loot','{}']]);
+  const localStorage={getItem:k=>data.get(k)??null,setItem(k,v){if(k==='DevastClientPreferences:ilm1')throw Error('quota');data.set(k,v)},removeItem(){assert.fail('must not remove legacy data after a failed copy')}};
+  const B={network:{state:0,ᴎᚂρ(){},ѕ᠋༢(){},ρ٨٨(){}},world:{}};
+  const context=vm.createContext({B,window:{addEventListener(){},requestAnimationFrame(){},setInterval(){}},document:{readyState:'loading',getElementById(){}},localStorage,performance:{now:()=>0},console:{error(){}}});
+  vm.runInContext(source+'\n__installDevastMod(B)',context);
+  assert.equal(data.get('BestModMenuConfig'),' {"distanceCoefficient":420}'.trim());
+  assert.equal(data.get('BestModMenuConfig:ilm1'),'1');assert.equal(data.get('BestModMenuConfig:loot'),'{}');
 });

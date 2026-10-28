@@ -131,7 +131,24 @@ function __installDevastMod(B) {
   const MOD = new HackCon();
   Object.assign(MOD, {zoomFactor:1, showFunctionList:true});
   const defaults = JSON.parse(JSON.stringify(MOD));
-  const SAVE = 'BestModMenuConfig';
+  const SAVE = 'DevastClientPreferences';
+  // Move only this mod's settings. Native survivor/account credentials stay intact.
+  // Copy the complete set before deleting any old entry, so a failed write
+  // cannot discard the user's saved bindings, aim settings or loot choices.
+  try {
+    const oldSave = 'BestModMenuConfig';
+    const suffixes = ['', ':ilm1', ':loot'];
+    const legacy = suffixes.map(suffix => localStorage.getItem(oldSave + suffix));
+    for (let i = 0; i < suffixes.length; i++) {
+      if (legacy[i] != null && localStorage.getItem(SAVE + suffixes[i]) == null)
+        localStorage.setItem(SAVE + suffixes[i], legacy[i]);
+    }
+    for (let i = 0; i < suffixes.length; i++) {
+      if (legacy[i] != null) localStorage.removeItem(oldSave + suffixes[i]);
+    }
+  } catch (error) {
+    console.error('[Devast mod] Settings migration failed:', error.message);
+  }
   const transient = new Set(['Token', 'token', 'tokenId', 'userId']);
   try {
     const saved = JSON.parse(localStorage.getItem(SAVE) || '{}');
@@ -1404,7 +1421,7 @@ function __installDevastMod(B) {
     reconnect.deadline = now + 12000;
     reconnect.status = 'Refreshing servers / retry ' + reconnect.attempts;
     try {
-      n.ⲅ︊ᄃ('https://devast.io/list?reconnect=' + Date.now(), () => {
+      n.ⲅ︊ᄃ('https://devast.io/list', () => {
         if (stopped || generation !== reconnect.generation) return;
         reconnect.pending = false;
         if (n.state !== 64) return;
