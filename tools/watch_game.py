@@ -51,7 +51,7 @@ def check(output):
                 return False
         product, report = work / 'game.modded.js', work / 'report.json'
         run([sys.executable, '-m', 'unittest', 'discover', '-s', 'tests', '-p', 'test_*.py'])
-        run(['node', '--test', 'tests/responsive.test.cjs', 'tests/ilm-integration.test.cjs', 'tests/native-labels.test.cjs'])
+        run(['node', '--test', 'tests/responsive.test.cjs', 'tests/ilm-integration.test.cjs', 'tests/native-labels.test.cjs', 'tests/doors.test.cjs'])
         run(['node', '--test', 'tests/remap.test.cjs'])
         run([sys.executable, 'tools/apply_patches.py', '--base', str(work / 'game.current.js'),
              '--manifest', str(manifest), '--output', str(product), '--report', str(report)])

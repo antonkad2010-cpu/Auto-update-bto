@@ -1044,9 +1044,9 @@ function __installDevastMod(B) {
   }
   function updateMouse() {
     const v = view(), can = v.ctx?.canvas || document.getElementById('can');
-    if (!can || !(v.scale > 0)) return;
+    if (!can || !(v.scale > 0)) return false;
     const r = can.getBoundingClientRect();
-    if (!r.width || !r.height) return;
+    if (!r.width || !r.height) return false;
     const cursor = mouse || ({
       x: r.left + r.width / 2,
       y: r.top + r.height / 2
@@ -1055,6 +1055,7 @@ function __installDevastMod(B) {
       x: (cursor.x - r.left) * can.width / r.width / v.scale - v.x,
       y: (cursor.y - r.top) * can.height / r.height / v.scale - v.y
     };
+    return Number.isFinite(GetAllTargets.mouseMapCords.x) && Number.isFinite(GetAllTargets.mouseMapCords.y);
   }
   function automate(now) {
     const me = B.world.ᅠᏧ‍;
@@ -1159,15 +1160,29 @@ function __installDevastMod(B) {
     const descriptor = B.items[r.e.Іࡈ５ >> 7];
     return descriptor && Number.isInteger(descriptor.ࡀ︂̄) && descriptor.ࡀ︂̄ > 0 ? descriptor : null;
   }
-  function openUnderMouse() {
-    if (!playing() || !MOD.OpenEverythingByClick) return false;
-    updateMouse();
-    const x = Math.floor(GetAllTargets.mouseMapCords.x / 100), y = Math.floor(GetAllTargets.mouseMapCords.y / 100);
-    for (const r of records) {
+  function openUnderMouse(event) {
+    if (!playing() || !MOD.OpenEverythingByClick || B.chatActive && B.chatActive()) return false;
+    const cursor = event ? {x:event.clientX, y:event.clientY} : mouse;
+    const can = view().ctx?.canvas || document.getElementById('can');
+    if (!cursor || !can) return false;
+    const rect = can.getBoundingClientRect();
+    if (!rect.width || !rect.height || cursor.x < rect.left || cursor.y < rect.top || cursor.x >= rect.left + rect.width || cursor.y >= rect.top + rect.height) return false;
+    mouse = cursor;
+    if (!updateMouse()) return false;
+    const point = GetAllTargets.mouseMapCords, x = Math.floor(point.x / 100), y = Math.floor(point.y / 100);
+    // Inspect live entities at click time; never use the native nearest-to-player target.
+    let selected = null, descriptor = null, nearest = Infinity;
+    for (const r of collect()) {
+      if (r.e.αބ̞ !== x || r.e.ᴀܛ٤ !== y) continue;
       const d = building(r);
-      if (d && r.e.αބ̞ === x && r.e.ᴀܛ٤ === y) return __send([d.ࡀ︂̄, r.e.id, r.e.ᴘ४１]);
+      if (!d) continue;
+      const distance = (r.e.x - point.x) ** 2 + (r.e.y - point.y) ** 2;
+      const door = d.ࡀ︂̄ === 15, selectedDoor = descriptor?.ࡀ︂̄ === 15;
+      if (!selected || door && !selectedDoor || door === selectedDoor && distance < nearest) {
+        selected = r.e; descriptor = d; nearest = distance;
+      }
     }
-    return false;
+    return selected ? __send([descriptor.ࡀ︂̄, selected.id, selected.ᴘ४１]) : false;
   }
   let lastOverlayLayout = -Infinity;
   let lastCollect = -Infinity;
@@ -1482,8 +1497,9 @@ function __installDevastMod(B) {
   }
   listen(window, 'keydown', keyboard, true);
   listen(window, 'mousemove', e => { mouse = {x:e.clientX, y:e.clientY}; }, true);
+  let interceptedRightClick = false;
   listen(window, 'mousedown', e => {
-    if (e.target.closest && e.target.closest('.dg')) return;
+    if (e.target.closest && e.target.closest('.dg,input,textarea,select,button,a,[contenteditable=true]')) return;
     mouse = {
       x: e.clientX,
       y: e.clientY
@@ -1492,15 +1508,21 @@ function __installDevastMod(B) {
       Aimbot.mouseDown = true;
 
     }
-    if (e.button === 2 && openUnderMouse()) {
+    if (e.button === 2) interceptedRightClick = false;
+    if (e.button === 2 && openUnderMouse(e)) {
+      interceptedRightClick = true;
       e.preventDefault();
       e.stopImmediatePropagation();
     }
   }, true);
   listen(window, 'mouseup', e => {
+    if (e.button === 2 && interceptedRightClick) {
+      interceptedRightClick = false; e.preventDefault(); e.stopImmediatePropagation();
+    }
     if (e.button === 0) Aimbot.mouseDown = false;
   }, true);
   listen(window, 'blur', () => {
+    interceptedRightClick = false;
     Aimbot.mouseDown = false;
   });
   const canvas = document.getElementById('can');
