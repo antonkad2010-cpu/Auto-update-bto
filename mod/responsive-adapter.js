@@ -9,7 +9,6 @@ var __responsiveMod = __installDevastMod({
     о̃༩.ᅠϲ᠍();
   },
   view:()=>({...__responsiveView,ctx:а०̅}),
-  renderFrame:()=>__responsiveView,
   chatActive:()=>document.activeElement?.id==='chatInput'
 });
 window.__devastMod=__responsiveMod;

@@ -1160,56 +1160,6 @@ function __installDevastMod(B) {
     const descriptor = B.items[r.e.Іࡈ５ >> 7];
     return descriptor && Number.isInteger(descriptor.ࡀ︂̄) && descriptor.ࡀ︂̄ > 0 ? descriptor : null;
   }
-  const doorRegions = new WeakMap(), doorPixels = new WeakMap();
-  let doorFrame = null, doorDrawOrder = 0;
-  const interaction = {status:'', until:0, pending:null};
-  function captureDoor(entity, frame, image, x, y, angle, ox, oy, width, height) {
-    if (frame !== doorFrame) { doorFrame = frame; doorDrawOrder = 0; }
-    let region = doorRegions.get(entity);
-    if (!region) { region = {}; doorRegions.set(entity, region); }
-    region.order=++doorDrawOrder; region.frame=frame; region.image=image; region.x=x; region.y=y; region.angle=angle;
-    region.ox=ox; region.oy=oy; region.width=width; region.height=height;
-  }
-  function hitsDoor(region, cursor, can, rect) {
-    if (!region || B.renderFrame && region.frame !== B.renderFrame()) return false;
-    const ratio = B.graphics.options?.еߎ༢ || 1;
-    const x = (cursor.x - rect.left) * can.width / rect.width / ratio - region.x;
-    const y = (cursor.y - rect.top) * can.height / rect.height / ratio - region.y;
-    const angle = Number.isFinite(region.angle) ? region.angle : 0;
-    const cos = Math.cos(angle), sin = Math.sin(angle);
-    const px = (x * cos + y * sin - region.ox) / region.width;
-    const py = (-x * sin + y * cos - region.oy) / region.height;
-    if (!(px >= 0 && py >= 0 && px < 1 && py < 1)) return false;
-    // Sample alpha only on click, caching pixels per sprite instead of per door/frame.
-    let pixels = doorPixels.get(region.image);
-    if (pixels === undefined) {
-      try {
-        const image = region.image, c = document.createElement('canvas');
-        c.width = image.width; c.height = image.height;
-        const context = c.getContext('2d', {willReadFrequently:true});
-        context.drawImage(image, 0, 0);
-        pixels = {width:c.width, height:c.height, data:context.getImageData(0, 0, c.width, c.height).data};
-      } catch (_) { pixels = null; }
-      doorPixels.set(region.image, pixels);
-    }
-    if (!pixels) return true;
-    return pixels.data[(Math.floor(py * pixels.height) * pixels.width + Math.floor(px * pixels.width)) * 4 + 3] > 16;
-  }
-  function interactionStatus(message, now = performance.now()) {
-    interaction.status = message; interaction.until = now + 3000;
-  }
-  function checkInteraction(now) {
-    const pending = interaction.pending;
-    if (!pending) return;
-    if (pending.entity.е̝ހ !== 0 || pending.entity.id !== pending.id || pending.entity.ᴘ४１ !== pending.owner) {
-      interaction.pending = null; interactionStatus('Дверь больше недоступна', now);
-    } else if ((pending.entity.state & 16) !== pending.open) {
-      interaction.pending = null;
-      interactionStatus(pending.entity.state & 16 ? 'Дверь открыта' : 'Дверь закрыта', now);
-    } else if (now >= pending.deadline) {
-      interaction.pending = null; interactionStatus('Сервер не подтвердил переключение двери', now);
-    }
-  }
   function openUnderMouse(event) {
     if (!playing() || !MOD.OpenEverythingByClick || B.chatActive && B.chatActive()) return false;
     const cursor = event ? {x:event.clientX, y:event.clientY} : mouse;
@@ -1220,31 +1170,19 @@ function __installDevastMod(B) {
     mouse = cursor;
     if (!updateMouse()) return false;
     const point = GetAllTargets.mouseMapCords, x = Math.floor(point.x / 100), y = Math.floor(point.y / 100);
-    let selected = null, descriptor = null, best = Infinity, selectedOrder = -1;
+    // Inspect live entities at click time; never use the native nearest-to-player target.
+    let selected = null, descriptor = null, nearest = Infinity;
     for (const r of collect()) {
+      if (r.e.αބ̞ !== x || r.e.ᴀܛ٤ !== y) continue;
       const d = building(r);
       if (!d) continue;
-      const door = d.ࡀ︂̄ === 15, region = door && doorRegions.get(r.e);
-      // Rendered door panels move and rotate away from their original tile.
-      const hit = door && region ? hitsDoor(region, cursor, can, rect) : r.e.αބ̞ === x && r.e.ᴀܛ٤ === y;
-      if (!hit) continue;
       const distance = (r.e.x - point.x) ** 2 + (r.e.y - point.y) ** 2;
-      const selectedDoor = descriptor?.ࡀ︂̄ === 15, order = region ? region.order : -1;
-      const nearer = door && selectedDoor && (order >= 0 || selectedOrder >= 0) ? order > selectedOrder : distance < best;
-      if (!selected || door && !selectedDoor || door === selectedDoor && nearer) {
-        selected = r.e; descriptor = d; best = distance; selectedOrder = order;
+      const door = d.ࡀ︂̄ === 15, selectedDoor = descriptor?.ࡀ︂̄ === 15;
+      if (!selected || door && !selectedDoor || door === selectedDoor && distance < nearest) {
+        selected = r.e; descriptor = d; nearest = distance;
       }
     }
-    if (!selected) { interactionStatus('Под курсором нет доступного объекта'); return false; }
-    const now = performance.now();
-    // A double-click while a toggle is unacknowledged must not toggle twice.
-    if (interaction.pending?.entity === selected && now < interaction.pending.deadline) return true;
-    const sent = __send([descriptor.ࡀ︂̄, selected.id, selected.ᴘ४１]);
-    if (sent && descriptor.ࡀ︂̄ === 15) {
-      interaction.pending = {entity:selected,id:selected.id,owner:selected.ᴘ४１,open:selected.state & 16,deadline:now+1500};
-      interactionStatus('Запрос двери отправлен; ожидается сервер', now);
-    }
-    return sent;
+    return selected ? __send([descriptor.ࡀ︂̄, selected.id, selected.ᴘ४１]) : false;
   }
   let lastOverlayLayout = -Infinity;
   let lastCollect = -Infinity;
@@ -1378,7 +1316,6 @@ function __installDevastMod(B) {
       }
     }
     ctx.globalAlpha = 1;
-    if (now < interaction.until) text(interaction.status, overlay.width / 2, 62, '#fff', 14);
     if (MOD.PlayersListEnabled) {
       ctx.fillStyle = 'rgba(0,0,0,.8)';
       ctx.fillRect(0, 0, overlay.width, overlay.height);
@@ -1479,11 +1416,9 @@ function __installDevastMod(B) {
   function step(now = performance.now()) {
     diagnostics.frames++;
     updateReconnect(now);
-    checkInteraction(now);
     if (!playing()) {
       lastSentAngle = null;
       pendingLoot.clear();
-      interaction.pending = null;
       if (previousPlayer) {
         Aimbot.onDeath();
         previousPlayer = 0;
@@ -1573,15 +1508,11 @@ function __installDevastMod(B) {
       Aimbot.mouseDown = true;
 
     }
-    if (e.button === 2) {
-      interceptedRightClick = false;
-      const can = view().ctx?.canvas || document.getElementById('can'), rect = can?.getBoundingClientRect();
-      if (playing() && MOD.OpenEverythingByClick && !(B.chatActive && B.chatActive()) && rect && e.clientX >= rect.left && e.clientY >= rect.top && e.clientX < rect.left + rect.width && e.clientY < rect.top + rect.height) {
-        openUnderMouse(e);
-        // A missed cursor hit must never fall through to a nearest-door action.
-        interceptedRightClick = true;
-        e.preventDefault(); e.stopImmediatePropagation();
-      }
+    if (e.button === 2) interceptedRightClick = false;
+    if (e.button === 2 && openUnderMouse(e)) {
+      interceptedRightClick = true;
+      e.preventDefault();
+      e.stopImmediatePropagation();
     }
   }, true);
   listen(window, 'mouseup', e => {
@@ -1774,8 +1705,6 @@ function __installDevastMod(B) {
     step,
     setSetting,
     openUnderMouse,
-    captureDoor,
-    interaction,
     clanColor,
     prepareClanTag,
     playerLabel,
