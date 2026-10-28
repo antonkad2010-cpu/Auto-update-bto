@@ -16,26 +16,18 @@ function __installDevastMod(B) {
       this.ShowRealAngles = "withAim";
       this.target = "players";
       this.AimBotEnabled = false;
-      this.hideAimbotAngle = false;
       this.mouseFovEnable = true;
-      this.distanceCoefficient = 100;
+      this.distanceCoefficient = 300;
       this.bulletSpeedCoefficient = 4;
       this.offsetCoefficient = 0.1;
       this.visualizeResolving = true;
-      this.visualizeResolvingColor = "#FFF200";
+      this.visualizeResolvingColor = "#EEEEEE";
       this.autoFire = false;
-      this.jitterActive = false;
-      this.jitterOffset = 85;
-      this.stopJittersOnStop = false;
-      this.jitterHitCd = 500;
-      this.jitterAimHold = 150;
-      this.JitterKey = "KeyJ";
-      this.ShowAimTrace = false;
       this.lockId = -1;
-      this.mouseFov = 131313;
+      this.mouseFov = 12345;
       this.OpenEverythingByClick = true;
       this.ShowBuildingOwner = true;
-      this.AimbotKey = "KeyZ";
+      this.AimbotKey = "Space";
       this.AutoBuiledKey = "KeyB";
       this.SAutoLootKey = "KeyX";
       this.FAutoLootKey = "KeyQ";
@@ -78,7 +70,7 @@ function __installDevastMod(B) {
       }
       this.obstacles = [];
       this.lines = [];
-      this.lines.push(new LinesCon(0.6, 1, "#FFF200"));
+      this.lines.push(new LinesCon(0.6, 1, "#EEEEEE"));
       this.lines.push(new LinesCon(0.8, 3, "#FF0000"));
       this.lines.push(new LinesCon(0.8, 3, "#00FF00"));
       this.lines.push(new LinesCon(0.8, 2, "#0000FF"));
@@ -105,459 +97,34 @@ function __installDevastMod(B) {
     getGhoulByUid(uID) {
       return this.ghouls[uID];
     }
+    resetLines() {
+      this.lines.forEach(line => line.reset(-1, -1, -1, -1));
+    }
   }
   class GetTarget {
-    constructor(ids) {
-      this.id = ids;
-      this.x = -1;
-      this.y = -1;
-      this.prevX = [];
-      this.prevY = [];
-      this.active = false;
-      this.weapon = -1;
-      this.gear = -1;
-      for (let lastpos = 0; lastpos < 3; lastpos++) {
-        this.prevX.push(-1);
-        this.prevY.push(-1);
-      }
+    constructor(id) { this.id=id; this.x=-1; this.y=-1; this.prevX=[-1,-1,-1]; this.prevY=[-1,-1,-1]; this.active=false; this.weapon=-1; this.gear=-1; }
+    update(x,y) {
+      if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+      this.prevX=[this.x,...this.prevX.slice(0,2)]; this.prevY=[this.y,...this.prevY.slice(0,2)];
+      this.x=x; this.y=y; this.active=true;
     }
-    update(ux, uy, xy) {
-      if (this.x !== ux || this.y !== uy) {
-        this.active = true;
-        this.prevX[2] = this.prevX[1];
-        this.prevX[1] = this.prevX[0];
-        this.prevX[0] = this.x;
-        this.x = ux;
-        this.prevY[2] = this.prevY[1];
-        this.prevY[1] = this.prevY[0];
-        this.prevY[0] = this.y;
-        this.y = uy;
-        this.weapon = xy;
-        AimbotRefresh();
-      }
-    }
-    setInactive() {
-      this.x = -1;
-      this.y = -1;
-      for (let lastposs = 0; lastposs < 3; lastposs++) {
-        this.prevX[lastposs] = -1;
-        this.prevY[lastposs] = -1;
-      }
-      this.active = false;
-      this.weapon = -1;
-      AimbotRefresh();
-    }
-  }
-  function _lineIntersect(x1, y1, x2, y2, x3, y3, x4, y4) {
-    const d = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
-    if (d === 0) return null;
-    const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / d;
-    return {
-      x: x1 + t * (x2 - x1),
-      y: y1 + t * (y2 - y1)
-    };
-  }
-  class JitterCon {
-    constructor() {
-      this.jitterStep = false;
-    }
-    getJitterAngle() {
-      this.jitterStep = !this.jitterStep;
-      let base = Aimbot.lastAngle;
-      let angle = this.jitterStep ? base + MOD.jitterOffset : base - MOD.jitterOffset;
-      angle = (angle % 360 + 360) % 360;
-      return angle;
-    }
+    setInactive() { this.x=-1; this.y=-1; this.prevX.fill(-1); this.prevY.fill(-1); this.active=false; GetAllTargets.resetLines(); }
   }
   class LinesCon {
-    constructor(alpha, width, color) {
-      this.x1 = -10;
-      this.x2 = -10;
-      this.y1 = -10;
-      this.y2 = -10;
-      this.alpha = alpha;
-      this.width = width;
-      this.color = color;
-    }
-    reset(x1, y1, x2, y2) {
-      this.x1 = x1;
-      this.x2 = x2;
-      this.y1 = y1;
-      this.y2 = y2;
-    }
+    constructor(alpha, width, color) { this.alpha=alpha; this.width=width; this.color=color; this.reset(-1,-1,-1,-1); }
+    reset(x1,y1,x2,y2) { this.x1=x1; this.y1=y1; this.x2=x2; this.y2=y2; }
   }
   class AimbotCon {
-    constructor() {
-      this.lastAngle = 0;
-      this.targetPlayer = null;
-      this.dead = false;
-      this.mouseDown = false;
-      this.lastHitTs = 0;
-    }
+    constructor() { this.lastAngle = 0; this.targetPlayer = null; this.mouseDown = false; }
     onDeath() {
-      this.dead = true;
-      this.targetPlayer = null;
-      this.lastAngle = 0;
-      this.mouseDown = false;
+      this.targetPlayer = null; this.mouseDown = false; GetAllTargets.lastId = 0;
+      for (const target of [...GetAllTargets.players, ...GetAllTargets.ghouls]) if (target && target.active) target.setInactive();
       GetAllTargets.lines.forEach(line => line.reset(-1, -1, -1, -1));
-      GetAllTargets.lastId = 0;
-      for (let i = 1; i < GetAllTargets.players.length; i++) {
-        const p = GetAllTargets.getPlayerById(i);
-        if (p && p.active) p.setInactive();
-      }
-      for (let i = 1; i < GetAllTargets.ghouls.length; i++) {
-        const g = GetAllTargets.getGhoulByUid(i);
-        if (g && g.active) g.setInactive();
-      }
     }
-    scheduleRefresh() {
-      if (this.isDead()) return;
-      this.refresh();
-    }
-    isDead() {
-      if (!ᅟࠅ８.ᅠᏧ‍ || ᅟࠅ８.ᅠᏧ‍.id === 0) return true;
-      if (!GetAllTargets.getPlayerById(ᅟࠅ８.ᅠᏧ‍.id)) return true;
-      this.dead = false;
-      return false;
-    }
-    refresh() {
-      GetAllTargets.lines.forEach(line => line.reset(-1, -1, -1, -1));
-      if (this.isDead()) {
-        this.targetPlayer = null;
-        return;
-      }
-      GetAllTargets.lastId = ᅟࠅ８.ᅠᏧ‍.id;
-      if (!MOD.AimBotEnabled) {
-        this.targetPlayer = null;
-        return;
-      }
-      if (MOD.jitterActive) {
-        const aimAngle = this.resolve();
-        const now = performance.now();
-        if (this.mouseDown && now - this.lastHitTs >= MOD.jitterHitCd) this.lastHitTs = now;
-        if (this.targetPlayer && now - this.lastHitTs < MOD.jitterAimHold) {
-          __send(window.JSON.stringify([6, aimAngle]));
-        } else if (this.targetPlayer || this.mouseDown || !MOD.stopJittersOnStop || GetAllTargets.myLastMoveDirection !== 0) {
-          __send(window.JSON.stringify([6, Jitter.getJitterAngle()]));
-        }
-      } else {
-        const angleToSend = this.resolve();
-        if (this.targetPlayer) __send(window.JSON.stringify([6, angleToSend]));
-        if (MOD.autoFire && this.wannaFire()) {
-          __send(window.JSON.stringify([4]));
-          __send(window.JSON.stringify([5]));
-        }
-      }
-    }
-    wannaFire(watarget = this.targetPlayer) {
-      if (!watarget) return false;
-      const dx = watarget.x - watarget.prevX[0], dy = watarget.y - watarget.prevY[0];
-      const dxPrev = watarget.prevX[0] - watarget.prevX[1], dyPrev = watarget.prevY[0] - watarget.prevY[1];
-      return dx > 0 != dxPrev > 0 || dy > 0 != dyPrev > 0;
-    }
-    resolve() {
-      try {
-        const myPlayer = GetAllTargets.getPlayerById(ᅟࠅ８.ᅠᏧ‍.id);
-        let target = null;
-        if (MOD.lockId > -1) {
-          target = GetAllTargets.getPlayerById(MOD.lockId);
-        } else if (MOD.mouseFovEnable) {
-          target = this.findNearestPlayerTo(GetAllTargets.mouseMapCords, MOD.mouseFov);
-        } else {
-          target = this.findNearestPlayerTo(GetAllTargets.mouseMapCords, Infinity);
-        }
-        this.targetPlayer = target;
-        if (!target || !target.active || !myPlayer || !myPlayer.active || target === myPlayer || myPlayer.x < 0) {
-          this.targetPlayer = null;
-          return this.lastAngle;
-        }
-        if (MOD.resolverType === 'trygonometrical') {
-          const rx = target.x - myPlayer.x, ry = target.y - myPlayer.y;
-          const vx = target.prevX[0] === -1 ? 0 : target.x - target.prevX[0];
-          const vy = target.prevY[0] === -1 ? 0 : target.y - target.prevY[0];
-          const velocitySquared = vx * vx + vy * vy;
-          let interceptTime = 0;
-          if (velocitySquared > 1e-12) {
-            const speedSquared = velocitySquared * MOD.bulletSpeedCoefficient ** 2;
-            const a = velocitySquared - speedSquared;
-            const b = 2 * (rx * vx + ry * vy), c = rx * rx + ry * ry;
-            if (Math.abs(a) < 1e-12) {
-              if (Math.abs(b) > 1e-12) interceptTime = Math.max(0, -c / b);
-            } else {
-              const discriminant = b * b - 4 * a * c;
-              if (discriminant >= 0) {
-                const root = Math.sqrt(discriminant);
-                const positive = [(-b - root) / (2 * a), (-b + root) / (2 * a)].filter(t => Number.isFinite(t) && t >= 0);
-                if (positive.length) interceptTime = Math.min(...positive);
-              }
-            }
-          }
-          const x = target.x + vx * interceptTime, y = target.y + vy * interceptTime;
-          if (MOD.visualizeResolving) GetAllTargets.lines[0].reset(myPlayer.x, myPlayer.y, x, y);
-          if (MOD.ShowAimTrace) {
-            GetAllTargets.lines[2].color = MOD.visualizeResolvingColor || '#FFFFFF';
-            GetAllTargets.lines[2].reset(myPlayer.x, myPlayer.y, x, y);
-          }
-          const angle = (Math.atan2(y - myPlayer.y, x - myPlayer.x) * 180 / Math.PI + 360) % 360;
-          this.lastAngle = angle;
-          return angle;
-        }
-        let targetX, targetY;
-        if (target.prevX[0] === -1) {
-          targetX = target.x;
-          targetY = target.y;
-        } else {
-          const factor = calculateDistance(myPlayer, target) / MOD.distanceCoefficient + MOD.offsetCoefficient;
-          targetX = target.x + factor * (target.x - target.prevX[0]);
-          targetY = target.y + factor * (target.y - target.prevY[0]);
-        }
-        if (MOD.visualizeResolving) GetAllTargets.lines[0].reset(myPlayer.x, myPlayer.y, targetX, targetY);
-        if (MOD.ShowAimTrace) {
-          GetAllTargets.lines[2].color = MOD.visualizeResolvingColor || "#FFFFFF";
-          GetAllTargets.lines[2].reset(myPlayer.x, myPlayer.y, targetX, targetY);
-        } else GetAllTargets.lines[2].reset(-1, -1, -1, -1);
-        const angle = (window.Math.atan2(targetY - myPlayer.y, targetX - myPlayer.x) * (180 / window.Math.PI) % 360 + 360) % 360;
-        this.lastAngle = angle;
-        return angle;
-      } catch (e) {
-        return this.lastAngle;
-      }
-    }
-    findNearestPlayerTo(cords, Fov) {
-      let fov = Fov, selected = null;
-      if (MOD.target === "players" || MOD.target === "all") {
-        for (let id = 1; id < GetAllTargets.players.length; id++) {
-          const player = GetAllTargets.getPlayerById(id);
-          if (!player || !player.active || player.id === ᅟࠅ８.ᅠᏧ‍.id) continue;
-          const wp = ᅟࠅ８.ᴎ︃ᄉ[player.id];
-          if (sameClan(player.id)) continue;
-          const dist = calculateDistance(cords, player);
-          if (dist < fov) {
-            selected = player;
-            fov = dist;
-          }
-        }
-      }
-      if (MOD.target === "ghouls" || MOD.target === "all") {
-        for (let uid = 1; uid < GetAllTargets.ghouls.length; uid++) {
-          const ghoul = GetAllTargets.getGhoulByUid(uid);
-          if (!ghoul || !ghoul.active) continue;
-          const dist = calculateDistance(cords, ghoul);
-          if (dist < fov) {
-            selected = ghoul;
-            fov = dist;
-          }
-        }
-      }
-      return selected;
-    }
+    isDead() { return !B.world.ᅠᏧ‍ || B.world.ᅠᏧ‍.id === 0; }
   }
   const MOD = new HackCon();
-  Object.assign(MOD, {
-    predictionEnabled: true,
-    autoProjectileSpeed: true,
-    projectileSpeed: 1800,
-    predictionHorizonMs: 800,
-    predictionLatencyMs: 0,
-    zoomFactor: 1,
-    showFunctionList: true
-  });
-  function updateMotion(previous, x, y, time) {
-    const fresh = () => ({
-      x,
-      y,
-      time,
-      vx: 0,
-      vy: 0,
-      intervalMs: 100,
-      ready: false
-    });
-    if (![x, y, time].every(Number.isFinite)) return null;
-    if (!previous || time < previous.time || time - previous.time > 1000) return fresh();
-    const dx = x - previous.x, dy = y - previous.y;
-    if (dx === 0 && dy === 0) return previous;
-    const dt = (time - previous.time) / 1000;
-    // Position interpolation can advance several times within a frame.  Use a
-    // short sampling window rather than treating each tiny update as velocity.
-    if (dt < .035) return previous;
-    const vx = dx / dt, vy = dy / dt;
-    if (Math.hypot(dx, dy) > 300 || Math.hypot(vx, vy) > 2500) return fresh();
-    const oldSpeed = Math.hypot(previous.vx, previous.vy), newSpeed = Math.hypot(vx, vy);
-    const reversed = previous.vx * vx + previous.vy * vy < .5 * oldSpeed * newSpeed;
-    const speedChanged = Math.abs(newSpeed - oldSpeed) > Math.max(40, oldSpeed * .35);
-    const weight = !previous.ready || reversed || speedChanged ? 1 : 1 - Math.exp(-dt / .09);
-    return {
-      x,
-      y,
-      time,
-      intervalMs: previous.ready ? previous.intervalMs * .5 + (time - previous.time) * .5 : time - previous.time,
-      vx: previous.vx + (vx - previous.vx) * weight,
-      vy: previous.vy + (vy - previous.vy) * weight,
-      ready: true
-    };
-  }
-  function motionVelocity(motion, time) {
-    if (!motion?.ready || !Number.isFinite(time) || time < motion.time) return {
-      x: 0,
-      y: 0
-    };
-    const interval = motion.intervalMs || 50;
-    const hold = Math.max(100, Math.min(350, interval * 1.1 + 50)), fadeTime = Math.max(100, Math.min(200, interval));
-    const fade = Math.max(0, Math.min(1, (hold + fadeTime - (time - motion.time)) / fadeTime));
-    return {
-      x: motion.vx * fade,
-      y: motion.vy * fade
-    };
-  }
-  function predictIntercept(origin, target, time, settings) {
-    const direct = {
-      x: target.x,
-      y: target.y,
-      flightTime: 0,
-      status: 'direct'
-    };
-    const speed = settings.projectileSpeed, horizon = Math.max(0, Math.min(2, settings.predictionHorizonMs / 1000));
-    if (![origin.x, origin.y, target.x, target.y, speed, horizon].every(Number.isFinite) || speed <= 0) return direct;
-    const v = motionVelocity(target.motion, time), latency = Math.max(0, Math.min(.3, settings.predictionLatencyMs / 1000 || 0));
-    if (v.x === 0 && v.y === 0) return direct;
-    const x = target.x + v.x * latency, y = target.y + v.y * latency, rx = x - origin.x, ry = y - origin.y;
-    const a = v.x * v.x + v.y * v.y - speed * speed, b = 2 * (rx * v.x + ry * v.y), c = rx * rx + ry * ry;
-    let roots = [];
-    if (Math.abs(a) < 1e-10 * Math.max(speed * speed, 1)) {
-      if (Math.abs(b) > 1e-10) roots = [-c / b];
-    } else {
-      const discriminant = b * b - 4 * a * c;
-      if (discriminant >= 0) {
-        const root = Math.sqrt(discriminant), q = -.5 * (b + (b >= 0 ? root : -root));
-        roots = q === 0 ? [0] : [q / a, c / q];
-      }
-    }
-    roots = roots.filter(t => Number.isFinite(t) && t >= 0);
-    if (!roots.length) return {
-      ...direct,
-      status: 'no-intercept'
-    };
-    const solution = Math.min(...roots), flightTime = Math.min(solution, horizon);
-    return {
-      x: x + v.x * flightTime,
-      y: y + v.y * flightTime,
-      flightTime,
-      status: solution > horizon ? 'limited' : 'intercept'
-    };
-  }
-  function createWeaponCalibration() {
-    const profiles = new Map(), tracks = new Map();
-    let active = null, changedAt = 0, projectileKind = null;
-    const median = a => {
-      const b = [...a].sort((x, y) => x - y);
-      return b[Math.floor(b.length / 2)];
-    };
-    return {
-      observe(records, owner, weapon, kind, time) {
-        if (active !== weapon) {
-          active = weapon;
-          changedAt = time;
-          projectileKind = null;
-          tracks.clear();
-        }
-        const seen = new Set();
-        if (!Number.isInteger(weapon)) return;
-        for (const e of records) {
-          if (e.ᴘ४１ !== owner || !Number.isInteger(e.Іࡈ５) || e.е̝ހ !== 0 || ![e.x, e.y].every(Number.isFinite)) continue;
-          if (time - changedAt < 350) continue;
-          if (projectileKind === null) projectileKind = e.Іࡈ５;
-          if (e.Іࡈ５ !== projectileKind) continue;
-          const key = e;
-          seen.add(key);
-          let t = tracks.get(key);
-          if (!t || t.generation !== e.ոᚄރ) {
-            if (time - changedAt < 350) continue;
-            tracks.set(key, {
-              x: e.x,
-              y: e.y,
-              time,
-              generation: e.ոᚄރ,
-              speeds: [],
-              done: false
-            });
-            // The current game's projectile initializer decodes its movement
-            // speed from the high byte of state in world units per millisecond.
-            const nativeSpeed = Number.isInteger(e.state) ? (e.state >>> 8) * 10 : 0;
-            if (nativeSpeed >= 100 && nativeSpeed <= 2550) {
-              const profileKey = weapon + ':' + projectileKind;
-              const samples = profiles.get(profileKey) || [];
-              samples.push(nativeSpeed);
-              if (samples.length > 15) samples.shift();
-              profiles.set(profileKey, samples);
-              tracks.get(key).done = true;
-            }
-            continue;
-          }
-          const dt = (time - t.time) / 1000;
-          if (dt < .016) continue;
-          const dx = e.x - t.x, dy = e.y - t.y, speed = Math.hypot(dx, dy) / dt;
-          if (dx === 0 && dy === 0) {
-            if (dt > .2) tracks.delete(key);
-            continue;
-          }
-          if (dt > .2 || speed < 100 || speed > 12000) {
-            tracks.delete(key);
-            continue;
-          }
-          if (t.dx !== undefined && dx * t.dx + dy * t.dy < .98 * Math.hypot(dx, dy) * Math.hypot(t.dx, t.dy)) {
-            tracks.delete(key);
-            continue;
-          }
-          Object.assign(t, {
-            x: e.x,
-            y: e.y,
-            time,
-            dx,
-            dy
-          });
-          t.speeds.push(speed);
-          if (t.speeds.length > 6) t.speeds.shift();
-          if (!t.done && t.speeds.length >= 3) {
-            const measured = median(t.speeds);
-            if (t.speeds.every(v => Math.abs(v - measured) <= measured * .12)) {
-              const profileKey = weapon + ':' + projectileKind;
-              const p = profiles.get(profileKey) || [];
-              p.push(measured);
-              if (p.length > 15) p.shift();
-              profiles.set(profileKey, p);
-              t.done = true;
-            }
-          }
-        }
-        for (const key of tracks.keys()) if (!seen.has(key)) tracks.delete(key);
-      },
-      get(weapon) {
-        const p = profiles.get(weapon + ':' + projectileKind) || [];
-        if (p.length < 3) return null;
-        const center = median(p), good = p.filter(x => Math.abs(x - center) <= center * .15);
-        if (good.length < 3) return null;
-        return {
-          speed: good.reduce((a, b) => a + b, 0) / good.length,
-          samples: good.length
-        };
-      },
-      reset() {
-        profiles.clear();
-        tracks.clear();
-        active = null;
-        projectileKind = null;
-        changedAt = 0;
-      }
-    };
-  }
-  const weaponCalibration = createWeaponCalibration();
-  let weaponInfo = {
-    id: null,
-    label: "Manual",
-    speed: MOD.projectileSpeed,
-    samples: 0
-  };
-  let predictionTime = performance.now();
+  Object.assign(MOD, {zoomFactor:1, showFunctionList:true});
   const defaults = JSON.parse(JSON.stringify(MOD));
   const SAVE = 'BestModMenuConfig';
   const transient = new Set(['Token', 'token', 'tokenId', 'userId']);
@@ -565,6 +132,13 @@ function __installDevastMod(B) {
     const saved = JSON.parse(localStorage.getItem(SAVE) || '{}');
     for (const key of Object.keys(defaults)) {
       if (!transient.has(key) && typeof saved[key] === typeof defaults[key] && (typeof saved[key] !== 'number' || Number.isFinite(saved[key]))) MOD[key] = saved[key];
+    }
+    if (localStorage.getItem(SAVE + ':ilm1') !== '1') {
+      for (const key of ['AimBotEnabled', 'AimbotKey', 'autoFire', 'target', 'mouseFovEnable', 'mouseFov', 'lockId', 'distanceCoefficient', 'offsetCoefficient', 'visualizeResolving', 'visualizeResolvingColor', 'ShowRealAngles']) MOD[key] = defaults[key];
+      const migrated = {};
+      for (const key of Object.keys(defaults)) if (!transient.has(key)) migrated[key] = MOD[key];
+      localStorage.setItem(SAVE, JSON.stringify(migrated));
+      localStorage.setItem(SAVE + ':ilm1', '1');
     }
   } catch (_) {}
   MOD.zoomFactor = 1;
@@ -1228,7 +802,6 @@ function __installDevastMod(B) {
   } catch (_) {}
   const GetAllTargets = new GetAllTargetsCon();
   const Aimbot = new AimbotCon();
-  const Jitter = new JitterCon();
   const _players_list = [];
   const removers = [];
   const originalSender = B.network.ᴎᚂρ.bind(B.network);
@@ -1320,122 +893,71 @@ function __installDevastMod(B) {
       console.error('[Devast mod]', message);
     }
   }
-  GetTarget.prototype.update = function (x, y, time = predictionTime) {
-    this.motion = updateMotion(this.motion, x, y, time);
-    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
-    this.prevX = [this.active ? this.x : -1, this.prevX[0], this.prevX[1]];
-    this.prevY = [this.active ? this.y : -1, this.prevY[0], this.prevY[1]];
-    this.x = x;
-    this.y = y;
-    this.active = true;
-  };
-  GetTarget.prototype.setInactive = function () {
-    this.motion = null;
-    this.x = -1;
-    this.y = -1;
-    this.active = false;
-    this.prevX = [-1, -1, -1];
-    this.prevY = [-1, -1, -1];
-  };
-  function AimbotRefresh() {}
-  Aimbot.__nextFire = 0;
-  Aimbot.lastHitTs = -Infinity;
+  // ILM 1.0 aim logic: packet position history, distance-based lead and
+  // direction-change auto fire. The network adapter converts its angle format.
   Aimbot.wannaFire = function (target = this.targetPlayer) {
-    const now = performance.now();
-    if (!target || !target.active || now < this.__nextFire) return false;
-    this.__nextFire = now + 150;
-    return true;
+    if (!target) return false;
+    const [x0, x1] = target.prevX, [y0, y1] = target.prevY;
+    return (target.x - x0 > 0) !== (x0 - x1 > 0) || (target.y - y0 > 0) !== (y0 - y1 > 0);
   };
   Aimbot.findNearestPlayerTo = function (coords, limit) {
-    const can = view().ctx?.canvas || document.getElementById('can'), rect = can?.getBoundingClientRect();
-    const sx = can && rect?.width ? rect.width / can.width : 1, sy = can && rect?.height ? rect.height / can.height : 1;
-    let chosen = null, best = Infinity;
-    const consider = target => {
-      if (!target || !target.active || !Number.isFinite(target.x) || !Number.isFinite(target.y)) return;
-      const dx = target.x - coords.x, dy = target.y - coords.y, worldDistance = Math.hypot(dx, dy);
-      if (worldDistance >= limit) return;
-      const screenDistance = Math.hypot(dx * sx, dy * sy);
-      if (screenDistance < best || screenDistance === best && target === this.targetPlayer) {
-        best = screenDistance;
-        chosen = target;
+    let selected = null, nearest = limit;
+    const consider = targets => {
+      for (const target of targets) {
+        if (!target || !target.active || target.id === B.world.ᅠᏧ‍.id || sameClan(target.id)) continue;
+        const distance = Math.hypot(coords.x - target.x, coords.y - target.y);
+        if (distance < nearest) { selected = target; nearest = distance; }
       }
     };
-    if (MOD.target === 'players' || MOD.target === 'all') for (const target of GetAllTargets.players) if (target && target.id !== B.world.ᅠᏧ‍.id && !sameClan(target.id)) consider(target);
-    if (MOD.target === 'ghouls' || MOD.target === 'all') for (const target of GetAllTargets.ghouls) consider(target);
-    return chosen;
+    if (MOD.target === 'players' || MOD.target === 'all') consider(GetAllTargets.players);
+    if (MOD.target === 'ghouls' || MOD.target === 'all') consider(GetAllTargets.ghouls);
+    return selected;
   };
-  const legacyResolve = Aimbot.resolve.bind(Aimbot);
   Aimbot.resolve = function () {
-    const fallback = legacyResolve();
-    this.prediction = null;
-    if (!this.targetPlayer) return fallback;
-    const self = GetAllTargets.getPlayerById(B.world.ᅠᏧ‍.id), target = this.targetPlayer;
-    // Use the same visible origin for prediction, the line, and the angle.
-    const origin = self;
-    const point = MOD.predictionEnabled ? predictIntercept(origin, target, predictionTime, {
-      ...MOD,
-      projectileSpeed: weaponInfo.speed
-    }) : {
-      x: target.x,
-      y: target.y,
-      flightTime: 0,
-      status: 'direct'
-    };
-    this.prediction = point;
-    if (MOD.visualizeResolving) GetAllTargets.lines[0].reset(self.x, self.y, point.x, point.y);
-    if (MOD.ShowAimTrace) GetAllTargets.lines[2].reset(self.x, self.y, point.x, point.y);
-    this.lastAngle = (Math.atan2(point.y - origin.y, point.x - origin.x) * 180 / Math.PI + 360) % 360;
-    return this.lastAngle;
-  };
-  function alignAimLines(self, angle) {
-    const direction = (Math.round(angle) % 360 + 360) % 360 * Math.PI / 180;
-    for (const line of GetAllTargets.lines) {
-      if (line.x1 < 0 || line.y1 < 0 || line.x2 < 0 || line.y2 < 0) continue;
-      const distance = Math.hypot(line.x2 - self.x, line.y2 - self.y);
-      line.reset(self.x, self.y, self.x + Math.cos(direction) * distance, self.y + Math.sin(direction) * distance);
-    }
-  }
-  function prepareManualShot() {
-    if (!playing() || !MOD.AimBotEnabled || B.chatActive && B.chatActive()) return;
-    predictionTime = performance.now();
-    records = collect();
-    updateTargets();
-    updateMouse();
-    updateWeaponCalibration(predictionTime);
     const self = GetAllTargets.getPlayerById(B.world.ᅠᏧ‍.id);
-    if (!self || !self.active) return;
-    GetAllTargets.lines.forEach(line => line.reset(-1, -1, -1, -1));
-    const angle = Aimbot.resolve();
-    if (!Aimbot.targetPlayer || !Number.isFinite(angle)) return;
-    alignAimLines(self, angle);
-    __send([6, angle], true);
-  }
+    if (!self || !self.active) { this.targetPlayer = null; return this.lastAngle; }
+    const target = MOD.lockId > -1 ? GetAllTargets.getPlayerById(MOD.lockId) :
+      MOD.mouseFovEnable ? this.findNearestPlayerTo(GetAllTargets.mouseMapCords, MOD.mouseFov) : this.findNearestPlayerTo(self, 2500);
+    this.targetPlayer = target && target.active ? target : null;
+    if (!this.targetPlayer) return this.lastAngle;
+    const factor = Math.hypot(self.x - target.x, self.y - target.y) / MOD.distanceCoefficient + MOD.offsetCoefficient;
+    const x = target.prevX[0] === -1 ? target.x : target.x + factor * (target.x - target.prevX[0]);
+    const y = target.prevY[0] === -1 ? target.y : target.y + factor * (target.y - target.prevY[0]);
+    this.lastAngle = Math.atan2(y - self.y, x - self.x) * (180 / Math.PI);
+    if (MOD.visualizeResolving) GetAllTargets.lines[0].reset(self.x, self.y, x, y);
+    return Math.round(this.lastAngle);
+  };
   Aimbot.refresh = function () {
-    GetAllTargets.lines.forEach(line => line.reset(-1, -1, -1, -1));
-    const self = GetAllTargets.getPlayerById(B.world.ᅠᏧ‍.id);
-    if (!playing() || !MOD.AimBotEnabled || !self || !self.active || this.isDead()) {
-      this.targetPlayer = null;
-      lastSentAngle = null;
-      return;
-    }
-    const angle = this.resolve(), now = performance.now();
-    if (!this.targetPlayer) lastSentAngle = null; else alignAimLines(self, angle);
-    const fire = MOD.autoFire && this.wannaFire();
-    if (fire || this.mouseDown && now - this.lastHitTs >= MOD.jitterHitCd) this.lastHitTs = now;
-    if (MOD.jitterActive && !this.targetPlayer) {
-      if (this.targetPlayer && now - this.lastHitTs < MOD.jitterAimHold) __send([6, angle], fire); else if (this.targetPlayer || this.mouseDown || !MOD.stopJittersOnStop || GetAllTargets.myLastMoveDirection !== 0) __send([6, Jitter.getJitterAngle()]);
-    } else if (this.targetPlayer) __send([6, angle], fire);
-    if (fire) {
-      __send([4]);
-      __send([5]);
-    }
+    if (!playing() || this.isDead()) return;
+    GetAllTargets.lastId = B.world.ᅠᏧ‍.id;
+    if (!MOD.AimBotEnabled) return;
+    const angle = this.resolve();
+    __send([6, angle], true);
+    if (MOD.autoFire && this.wannaFire()) { __send([4]); __send([5]); }
   };
+  function trackPacket(type, playerId, uid, x, y, active) {
+    const group = type === B.categories.player ? GetAllTargets.players : type === 13 ? GetAllTargets.ghouls : null;
+    const id = type === B.categories.player ? playerId : uid;
+    if (!group || !Number.isInteger(id) || id < 1 || id > 65535) return;
+    if (!group[id]) group[id] = new GetTarget(id);
+    if (!active) { group[id].setInactive(); GetAllTargets.lines.forEach(line => line.reset(-1,-1,-1,-1)); return; }
+    if (Number.isFinite(x) && Number.isFinite(y)) group[id].update(x, y);
+  }
   function playerMeta(id) {
     return B.world.ᴎ︃ᄉ[id];
   }
   function nickname(id) {
     const p = playerMeta(id), value = p && p.ο̏︇;
-    return String(typeof value === 'string' ? value : _players_list[id] || '');
+    return typeof value === 'string' ? value : '';
+  }
+  function playerRows() {
+    const rows = [];
+    B.world.ᴎ︃ᄉ.forEach((meta, id) => {
+      const name = nickname(id);
+      if (!meta || !name || id === 0) return;
+      rows.push({id, name, clan: validClan(id)?.name || ''});
+    });
+    return rows;
   }
   function playerLabel(meta, id) {
     const known = playerLabelCache.get(meta);
@@ -1494,45 +1016,7 @@ function __installDevastMod(B) {
     return result;
   }
   function updateTargets() {
-    const players = new Set(), ghouls = new Set();
-    for (const {type, e} of records) {
-      if (type !== B.categories.player && type !== 13) continue;
-      const isPlayer = type === B.categories.player, id = isPlayer ? e.ᴘ४１ : e.ոᚄރ;
-      if (!Number.isInteger(id) || id < 1 || id > 65535) continue;
-      const group = isPlayer ? GetAllTargets.players : GetAllTargets.ghouls;
-      if (!group[id]) group[id] = new GetTarget(id);
-      // The renderer smooths x/y behind rx/ry. Use the simulated target
-      // position for tracking when it is available and close to the sprite.
-      const isSelf = isPlayer && id === B.world.ᅠᏧ‍.id;
-      const simulated = !isSelf && Number.isFinite(e.rx) && Number.isFinite(e.ry) && Math.hypot(e.rx - e.x, e.ry - e.y) <= 300;
-      group[id].update(simulated ? e.rx : e.x, simulated ? e.ry : e.y);
-      (isPlayer ? players : ghouls).add(id);
-      if (isPlayer && playerMeta(id) && typeof playerMeta(id).ο̏︇ === 'string') _players_list[id] = playerMeta(id).ο̏︇;
-    }
-    for (const [group, seen] of [[GetAllTargets.players, players], [GetAllTargets.ghouls, ghouls]]) {
-      for (const p of group) if (p && p.active && !seen.has(p.id)) p.setInactive();
-    }
-    const self = GetAllTargets.getPlayerById(B.world.ᅠᏧ‍.id);
-    GetAllTargets.myLastMoveDirection = self && (self.x !== self.prevX[0] || self.y !== self.prevY[0]) ? 1 : 0;
-  }
-  function updateWeaponCalibration(now) {
-    const me = B.world.ᅠᏧ‍, self = records.find(r => r.type === B.categories.player && r.e.ᴘ४１ === me.id);
-    const id = self ? self.e.Іࡈ５ >> 8 & 255 : null, weapon = B.types?.[B.categories.player]?.р︎̇?.[id];
-    const kind = weapon?.type;
-    if (MOD.autoProjectileSpeed) weaponCalibration.observe(records.filter(r => r.type === B.categories.projectile).map(r => r.e), me.id, id, kind, now);
-    const measured = MOD.autoProjectileSpeed ? weaponCalibration.get(id) : null;
-    const labels = {
-      10: 'AK47',
-      34: 'Laser Pistol',
-      37: 'Laser Submachine',
-      53: 'Laser Sniper'
-    };
-    weaponInfo = {
-      id,
-      label: labels[id] || 'Weapon ' + (id ?? '?'),
-      speed: measured ? measured.speed : MOD.projectileSpeed,
-      samples: measured?.samples || 0
-    };
+    for (const {type, e} of records) if (type === B.categories.player && playerMeta(e.ᴘ४１) && typeof playerMeta(e.ᴘ४１).ο̏︇ === 'string') _players_list[e.ᴘ४１] = playerMeta(e.ᴘ४１).ο̏︇;
   }
   function view() {
     const v = B.view(), ratio = B.graphics.options && B.graphics.options.еߎ༢;
@@ -1668,6 +1152,9 @@ function __installDevastMod(B) {
     }
     return false;
   }
+  let lastOverlayLayout = -Infinity;
+  let lastCollect = -Infinity;
+  let lastListUpdate = -Infinity, cachedPlayerRows = [];
   function ensureOverlay() {
     const can = view().ctx?.canvas || document.getElementById('can');
     if (!can) return false;
@@ -1684,6 +1171,9 @@ function __installDevastMod(B) {
       document.body.appendChild(overlayHost);
       ctx = overlay.getContext('2d');
     }
+    const now = performance.now();
+    if (overlay.width === can.width && overlay.height === can.height && now - lastOverlayLayout < 250) return !!ctx;
+    lastOverlayLayout = now;
     const r = can.getBoundingClientRect();
     if (overlay.width !== can.width) overlay.width = can.width;
     if (overlay.height !== can.height) overlay.height = can.height;
@@ -1763,7 +1253,7 @@ function __installDevastMod(B) {
     for (const r of records) {
       if (r.type === B.categories.player) {
         const id = r.e.ᴘ४１, p = at(r.e), self = id === me.id, color = self && !validClan(id) ? '#00ffff' : clanColor(id);
-        if (MOD.ShowNamesOnMap && !B.nativePlayerLabels && Number.isInteger(id) && id > 0) text('#' + id, p.x, p.y - 56 * v.scale, color);
+        if (MOD.ShowNamesOnMap && !B.nativePlayerLabels && Number.isInteger(id) && id > 0 && p.x > -100 && p.y > -100 && p.x < overlay.width + 100 && p.y < overlay.height + 100) text('#' + id, p.x, p.y - 56 * v.scale, color, Math.max(10, 14 * v.scale));
         if (MOD.ShowPlayerHitbox) {
           ctx.strokeStyle = color;
           ctx.lineWidth = 2;
@@ -1771,24 +1261,7 @@ function __installDevastMod(B) {
           ctx.arc(p.x, p.y, 38 * v.scale, 0, Math.PI * 2);
           ctx.stroke();
           ctx.strokeRect(p.x - 30 * v.scale, p.y - 30 * v.scale, 60 * v.scale, 60 * v.scale);
-          const origin = GetAllTargets.getPlayerById(me.id), player = GetAllTargets.getPlayerById(id);
-          if (!self && MOD.predictionEnabled && origin?.active && player?.active) {
-            const predicted = predictIntercept(origin, player, predictionTime, {
-              ...MOD,
-              projectileSpeed: weaponInfo.speed
-            });
-            if (['intercept', 'limited'].includes(predicted.status)) {
-              const lead = at(predicted);
-              ctx.save();
-              ctx.strokeStyle = '#ff55ff';
-              ctx.setLineDash([5, 4]);
-              ctx.beginPath();
-              ctx.arc(lead.x, lead.y, 38 * v.scale, 0, Math.PI * 2);
-              ctx.stroke();
-              ctx.strokeRect(lead.x - 30 * v.scale, lead.y - 30 * v.scale, 60 * v.scale, 60 * v.scale);
-              ctx.restore();
-            }
-          }
+
         }
         if (MOD.KarmaAboveHead) {
           const meta = playerMeta(id), sprite = meta && B.karma[meta.ᴑᴄ̉];
@@ -1802,20 +1275,15 @@ function __installDevastMod(B) {
         }
       }
     }
-    const target = Aimbot.targetPlayer;
     const selfRecord = records.find(r => r.type === B.categories.player && r.e.ᴘ४１ === me.id);
-    const targetRecord = target && records.find(r => r.type === B.categories.player && r.e.ᴘ४１ === target.id && GetAllTargets.players[target.id] === target || r.type === 13 && r.e.ոᚄރ === target.id && GetAllTargets.ghouls[target.id] === target);
-    if (MOD.AimBotEnabled && selfRecord && targetRecord && target.active && selfRecord.e.е̝ހ === 0 && targetRecord.e.е̝ހ === 0) {
-      const start = at(selfRecord.e);
+    if (MOD.AimBotEnabled && selfRecord) {
+      const ownPosition = at(selfRecord.e);
+      text('AIM BOT', ownPosition.x, ownPosition.y - 75 * v.scale, '#ad00e3', 20 * v.scale);
       for (const [i, line] of GetAllTargets.lines.entries()) {
-        if (i === 0 && !MOD.visualizeResolving || i === 2 && !MOD.ShowAimTrace) continue;
-        if (![line.x1, line.y1, line.x2, line.y2].every(Number.isFinite) || line.x1 < 0 || line.y1 < 0 || line.x2 < 0 || line.y2 < 0) continue;
-        const distance = Math.hypot(line.x2 - line.x1, line.y2 - line.y1);
-        const heading = (Math.round(Aimbot.lastAngle) % 360 + 360) % 360 * Math.PI / 180;
-        const end = at({
-          x: selfRecord.e.x + Math.cos(heading) * distance,
-          y: selfRecord.e.y + Math.sin(heading) * distance
-        });
+        if (i === 0 && !MOD.visualizeResolving) continue;
+        if (![line.x1, line.y1, line.x2, line.y2].every(Number.isFinite) || line.x1 === -1 && line.y1 === -1 && line.x2 === -1 && line.y2 === -1) continue;
+        const start = at({x:line.x1, y:line.y1});
+        const end = at({x:line.x2, y:line.y2});
         ctx.globalAlpha = line.alpha;
         ctx.strokeStyle = line.color;
         ctx.lineWidth = line.width;
@@ -1826,32 +1294,22 @@ function __installDevastMod(B) {
       }
     }
     ctx.globalAlpha = 1;
-    if (MOD.AimBotEnabled && MOD.predictionEnabled && MOD.visualizeResolving && selfRecord && targetRecord && targetRecord.e.е̝ހ === 0 && Aimbot.prediction && ['intercept', 'limited'].includes(Aimbot.prediction.status)) {
-      // Match the displayed impact marker to the rounded angle sent to the game.
-      const distance = Math.hypot(Aimbot.prediction.x - selfRecord.e.x, Aimbot.prediction.y - selfRecord.e.y);
-      const heading = (Math.round(Aimbot.lastAngle) % 360 + 360) % 360 * Math.PI / 180;
-      const point = at({x:selfRecord.e.x + Math.cos(heading) * distance, y:selfRecord.e.y + Math.sin(heading) * distance});
-      ctx.save();
-      ctx.strokeStyle = '#ff55ff';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([]);
-      ctx.beginPath();
-      ctx.arc(point.x, point.y, 6, 0, Math.PI * 2);
-      ctx.stroke();
-      text(Math.round(Aimbot.prediction.flightTime * 1000) + ' ms', point.x, point.y - 12, '#ff88ff', 12);
-      ctx.restore();
-    }
     if (MOD.PlayersListEnabled) {
       ctx.fillStyle = 'rgba(0,0,0,.8)';
       ctx.fillRect(0, 0, overlay.width, overlay.height);
+      const now = performance.now();
+      if (now - lastListUpdate >= 250) { cachedPlayerRows = playerRows(); lastListUpdate = now; }
+      const columns = Math.max(1, Math.floor(overlay.width / 260));
+      const rowsPerColumn = Math.max(1, Math.floor((overlay.height - 70) / 22));
       let i = 0;
-      B.world.ᴎ︃ᄉ.forEach((p, id) => {
-        if (!p || !nickname(id) || id === 0 || id === 120) return;
-        const clan = p.а༤̘ !== -1 && B.world.ﾠࡅ‍[p.а༤̘], col = Math.floor(i / 30), row = i % 30;
-        text(nickname(id) + ' #' + id + (clan && clan.name ? ' [' + clan.name + ']' : ''), 120 + col * (overlay.width / 4), 35 + row * ((overlay.height - 70) / 30), clanColor(id), 13);
-        i++;
-      });
-      text('Players: ' + i, overlay.width - 100, overlay.height - 22);
+      for (const {id, name, clan} of cachedPlayerRows.slice(0, columns * rowsPerColumn)) {
+        const col = Math.floor(i / rowsPerColumn), row = i % rowsPerColumn;
+        const width = overlay.width / columns;
+        ctx.save(); ctx.beginPath(); ctx.rect(col * width, 0, width, overlay.height); ctx.clip();
+        text('#' + id + ' ' + name + (clan ? ' [' + clan + ']' : ' [No clan]'), (col + .5) * width, 35 + row * 22, clanColor(id), 13);
+        ctx.restore(); i++;
+      }
+      text('Players: ' + cachedPlayerRows.length, overlay.width - 100, overlay.height - 22);
     }
     ctx.restore();
   }
@@ -1935,7 +1393,6 @@ function __installDevastMod(B) {
   }
   function step(now = performance.now()) {
     diagnostics.frames++;
-    predictionTime = now;
     updateReconnect(now);
     if (!playing()) {
       lastSentAngle = null;
@@ -1952,22 +1409,19 @@ function __installDevastMod(B) {
     }
     if (previousPlayer !== B.world.ᅠᏧ‍.id) {
       lastSentAngle = null;
-      weaponCalibration.reset();
-      Aimbot.onDeath();
+      if (previousPlayer) Aimbot.onDeath();
       previousPlayer = B.world.ᅠᏧ‍.id;
       lastLoot = lastBuild = lastTake = now;
       lastChat = nextChatAt = -Infinity;
       lastKeepAlive = now;
     }
-    records = collect();
-    updateTargets();
-    updateMouse();
-    updateWeaponCalibration(now);
-    if (MOD.AimBotEnabled) Aimbot.refresh(); else lastSentAngle = null;
-    if (MOD.ShowRealAngles === 'always' || MOD.ShowRealAngles === 'withAim' && MOD.AimBotEnabled) {
-      const self = records.find(r => r.type === B.categories.player && r.e.ᴘ४１ === B.world.ᅠᏧ‍.id);
-      if (self && Number.isFinite(self.e.ࡀօ̙)) self.e.angle = self.e.ࡀօ̙;
+    if (now - lastCollect >= 50) {
+      records = collect();
+      updateTargets();
+      lastCollect = now;
     }
+    updateMouse();
+    if (!MOD.AimBotEnabled) lastSentAngle = null;
     automate(now);
     if (!B.synchronizedRender) draw();
   }
@@ -1983,27 +1437,13 @@ function __installDevastMod(B) {
     }
     nextFrame = window.requestAnimationFrame(tick);
   }
+  // ILM executes its aim loop every 50 ms, independently of rendering.
+  const aimTimer = window.setInterval(() => {
+    if (stopped) return;
+    try { Aimbot.refresh(); } catch (error) { report(error); }
+  }, 50);
   for (const key of ["ѕ᠋༢", "ρ٨٨"]) {
     if (typeof B.network[key] !== 'function') throw new Error('Missing native angle handler');
-    originals[key] = B.network[key];
-    B.network[key] = function (...args) {
-      if (playing() && MOD.AimBotEnabled && Aimbot.targetPlayer) return;
-      lastSentAngle = null;
-      return originals[key].apply(this, args);
-    };
-  }
-  // The game can start or repeat an attack during its own update loop,
-  // independently of mouse events. Send the current lead before that attack.
-  if (typeof B.network.ῐ︆ === 'function') {
-    originals.ῐ︆ = B.network.ῐ︆;
-    B.network.ῐ︆ = function (...args) {
-      try {
-        prepareManualShot();
-      } catch (error) {
-        report(error);
-      }
-      return originals.ῐ︆.apply(this, args);
-    };
   }
   function keyboard(e) {
     if (waitingKey) {
@@ -2025,7 +1465,6 @@ function __installDevastMod(B) {
       AutoTakeKey: 'AutoTakeEnabled',
       XrayKey: 'XrayBuildings',
       PlayersListKey: 'PlayersListEnabled',
-      JitterKey: 'jitterActive'
     };
     if (e.code === MOD.ModMenuKey) {
       if (menu) menu.domElement.style.display = menu.domElement.style.display === 'none' ? '' : 'none';
@@ -2037,25 +1476,7 @@ function __installDevastMod(B) {
     }
   }
   listen(window, 'keydown', keyboard, true);
-  listen(window, 'mousemove', e => {
-    mouse = {
-      x: e.clientX,
-      y: e.clientY
-    };
-    if (e.target !== document.getElementById('can') || !playing() || !MOD.AimBotEnabled || B.chatActive && B.chatActive() || Aimbot.isDead()) return;
-    predictionTime = performance.now();
-    records = collect();
-    updateTargets();
-    const self = GetAllTargets.getPlayerById(B.world.ᅠᏧ‍.id);
-    if (!self?.active) return;
-    updateMouse();
-    GetAllTargets.lines.forEach(line => line.reset(-1, -1, -1, -1));
-    const angle = Aimbot.resolve();
-    if (Aimbot.targetPlayer && Number.isFinite(angle)) {
-      alignAimLines(self, angle);
-      __send([6, angle]);
-    }
-  }, true);
+  listen(window, 'mousemove', e => { mouse = {x:e.clientX, y:e.clientY}; }, true);
   listen(window, 'mousedown', e => {
     if (e.target.closest && e.target.closest('.dg')) return;
     mouse = {
@@ -2064,7 +1485,7 @@ function __installDevastMod(B) {
     };
     if (e.button === 0) {
       Aimbot.mouseDown = true;
-      if (e.target === document.getElementById('can')) prepareManualShot();
+
     }
     if (e.button === 2 && openUnderMouse()) {
       e.preventDefault();
@@ -2119,41 +1540,16 @@ function __installDevastMod(B) {
     add(visual, 'Xraytransparency', 'Building opacity', .05, 1, .05);
     for (const key of ['TeamClanColor', 'EnemyClanColor']) visual.addColor(MOD, key).onChange(persist);
     const aim = menu.addFolder('Aim bot');
-    for (const key of ['AimBotEnabled', 'hideAimbotAngle', 'autoFire', 'visualizeResolving', 'ShowAimTrace']) add(aim, key);
-    add(aim, 'predictionEnabled', 'Motion prediction');
-    add(aim, 'autoProjectileSpeed', 'Measure own bullets');
-    const speedStatus = {
-      get status() {
-        return weaponInfo.label + ' / ' + Math.round(weaponInfo.speed) + ' u/s / ' + (weaponInfo.samples ? weaponInfo.samples + ' shots' : 'manual fallback');
-      }
-    };
-    const speedInfo = aim.add(speedStatus, 'status').name('Bullet speed source').listen();
-    speedInfo.domElement.querySelector('input').readOnly = true;
-    const predictionStatus = {
-      get status() {
-        const p = Aimbot.prediction;
-        if (!MOD.predictionEnabled) return 'Off';
-        if (!Aimbot.targetPlayer) return 'No target';
-        if (!p) return 'Waiting for samples';
-        return p.status + ' / ' + Math.round(p.flightTime * 1000) + ' ms';
-      }
-    };
-    const predictionInfo = aim.add(predictionStatus, 'status').name('Lead status').listen();
-    predictionInfo.domElement.querySelector('input').readOnly = true;
-    add(aim, 'projectileSpeed', 'Manual / fallback speed', 100, 6000, 50);
-    add(aim, 'predictionHorizonMs', 'Maximum lead (ms)', 0, 2000, 25);
-    add(aim, 'predictionLatencyMs', 'Extra latency (ms)', 0, 300, 5);
-    add(aim, 'resolverType', 'Legacy fallback', ['linear', 'trygonometrical']);
+    for (const key of ['AimBotEnabled', 'autoFire', 'visualizeResolving']) add(aim, key);
     add(aim, 'ShowRealAngles', 'Show real angles', ['always', 'withAim']);
+    add(aim, 'target', 'Target', ['players', 'ghouls', 'all']);
+    add(aim, 'mouseFovEnable', 'Target near cursor');
+    add(aim, 'mouseFov', 'Cursor range', 1, 20000, 1);
+    add(aim, 'lockId', 'Lock player ID', -1, 65535, 1);
     add(aim, 'distanceCoefficient', 'Distance coefficient', 10, 1000, 10);
-    add(aim, 'bulletSpeedCoefficient', 'Bullet speed', 1, 15, .25);
+    add(aim, 'bulletSpeedCoefficient', 'Bullet speed (ILM legacy)', 1, 15, .25);
     add(aim, 'offsetCoefficient', 'Prediction offset', 0, 3, .1);
     aim.addColor(MOD, 'visualizeResolvingColor').onChange(persist);
-    const jitter = aim.addFolder('Jitter');
-    for (const key of ['jitterActive', 'stopJittersOnStop']) add(jitter, key);
-    add(jitter, 'jitterOffset', 'Offset', 0, 180, 1);
-    add(jitter, 'jitterHitCd', 'Hit interval', 50, 2000, 50);
-    add(jitter, 'jitterAimHold', 'Aim hold', 0, 1000, 10);
     const zoom = menu.addFolder('Zoom');
     zoomControl = add(zoom, 'zoomFactor', 'View scale', .33, 2, .01);
     zoom.add({
@@ -2164,7 +1560,7 @@ function __installDevastMod(B) {
     const filter = automation.addFolder('Loot filter');
     for (const [name, item] of Object.entries(LootData)) filter.add(item, 'acquire').name(name).onChange(persist);
     const keys = menu.addFolder('Keyboard');
-    for (const key of ['AimbotKey', 'AutoBuiledKey', 'SAutoLootKey', 'FAutoLootKey', 'AutoTakeKey', 'XrayKey', 'PlayersListKey', 'JitterKey', 'ModMenuKey']) {
+    for (const key of ['AimbotKey', 'AutoBuiledKey', 'SAutoLootKey', 'FAutoLootKey', 'AutoTakeKey', 'XrayKey', 'PlayersListKey', 'ModMenuKey']) {
       const c = keys.add(MOD, key), input = c.domElement.querySelector('input');
       input.readOnly = true;
       listen(input, "click", () => {
@@ -2273,6 +1669,7 @@ function __installDevastMod(B) {
   return {
     settings: MOD,
     targets: GetAllTargets,
+    trackPacket,
     aim: Aimbot,
     loot: LootData,
     diagnostics,
@@ -2284,6 +1681,7 @@ function __installDevastMod(B) {
     clanColor,
     prepareClanTag,
     playerLabel,
+    playerRows,
     preparePlayerLabel,
     zoomOffset,
     render(now = performance.now()) {
@@ -2307,15 +1705,11 @@ function __installDevastMod(B) {
     get functionList() {
       return functionList;
     },
-    get weaponInfo() {
-      return {
-        ...weaponInfo
-      };
-    },
     dispose() {
       MOD.zoomFactor = 1;
       MOD.AimBotEnabled = false;
       stopped = true;
+      window.clearInterval(aimTimer);
       pendingLoot.clear();
       window.cancelAnimationFrame(nextFrame);
       removers.forEach(f => f());
