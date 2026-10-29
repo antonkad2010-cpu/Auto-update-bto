@@ -100,6 +100,13 @@
         "../mod/responsive-adapter.js"
       ],
       "assert_contains": "window.__devastMod=__responsiveMod;"
+    },
+    {
+      "id": "ilm-fast-loot-native-cycle",
+      "literal": true,
+      "anchor": "for(ᴀܛ٤=0;ᴉр︁>ᴀܛ٤ ; ᴀܛ٤++)ㅤࡇ᠋(ԁ̷４[ܐࠅ́.ⲣᴑᴏ[ᴀܛ٤]  ] );",
+      "mode": "replace",
+      "replacement": "for(ᴀܛ٤=0;ᴉр︁>ᴀܛ٤;ᴀܛ٤++){var __ilmLoot=ԁ̷４[ܐࠅ́.ⲣᴑᴏ[ᴀܛ٤]];ㅤࡇ᠋(__ilmLoot);if(__responsiveMod)__responsiveMod.fastLoot(__ilmLoot);}"
     }
   ],
   "uploaded_source": "game.modded.aim-responsive.js",

@@ -865,7 +865,7 @@ function __installDevastMod(B) {
     ['AutoTakeEnabled', 'AutoTake'],
     [null, 'AutoEat']
   ];
-  const pendingLoot = new Map(), playerLabelCache = new WeakMap();
+  const playerLabelCache = new WeakMap();
   function listen(target, event, callback, options) {
     target.addEventListener(event, callback, options);
     removers.push(() => target.removeEventListener(event, callback, options));
@@ -1093,7 +1093,6 @@ function __installDevastMod(B) {
   }
   function automate(now) {
     const me = B.world.ᅠᏧ‍;
-    if (MOD.FAutoLootEnabled) scanFastLoot(now); else pendingLoot.clear();
     if (MOD.SAutoLootEnabled && !MOD.FAutoLootEnabled && now - lastLoot >= 200) {
       lastLoot = now;
       const allowed = new Set(Object.values(LootData).filter(x => x.acquire).map(x => x.id));
@@ -1157,37 +1156,15 @@ function __installDevastMod(B) {
       chatState.status = 'Send not confirmed';
     }
   }
-  function scanFastLoot(now) {
-    if (!playing() || !MOD.FAutoLootEnabled) {
-      pendingLoot.clear();
-      return;
-    }
-    const me = B.world.ᅠᏧ‍, type = B.categories.loot, border = B.entities.border[type], group = B.entities.ᴎ̂２[type];
-    const seen = new Set(), candidates = [];
-    if (border && group) for (let i = 0; i < border.border; i++) {
-      const e = group[border.ⲣᴑᴏ[i]];
-      if (!e || e.е̝ހ !== 0 || !Number.isInteger(e.id) || !Number.isFinite(e.x) || !Number.isFinite(e.y)) continue;
-      const distance = (e.x - me.x) ** 2 + (e.y - me.y) ** 2;
-      if (distance >= 50000) continue;
-      seen.add(e.id);
-      let state = pendingLoot.get(e.id);
-      if (state && (state.entity !== e || state.resource !== e.Іࡈ５)) {
-        pendingLoot.delete(e.id);
-        state = null;
-      }
-      if (!state || now - state.sentAt >= 250 || now < state.sentAt) candidates.push({
-        e,
-        state,
-        distance
-      });
-    }
-    for (const id of pendingLoot.keys()) if (!seen.has(id)) pendingLoot.delete(id);
-    candidates.sort((a, b) => Number(!!a.state) - Number(!!b.state) || (a.state?.sentAt || 0) - (b.state?.sentAt || 0) || a.distance - b.distance);
-    for (const {e} of [...candidates.filter(x => !x.state), ...candidates.filter(x => x.state).slice(0, 4)]) if (__send([12, e.id])) pendingLoot.set(e.id, {
-      entity: e,
-      resource: e.Іࡈ５,
-      sentAt: now
-    });
+  // ILM runs this once per active loot entity in the native update cycle.
+  // Keep its squared radius, native order, filtering and per-cycle retries.
+  function fastLoot(entity) {
+    if (!playing() || !MOD.FAutoLootEnabled || !entity || entity.е̝ހ !== 0 ||
+        !Number.isInteger(entity.id) || entity.id < 0 || !Number.isFinite(entity.x) || !Number.isFinite(entity.y)) return false;
+    const me = B.world.ᅠᏧ‍;
+    if (!((entity.x - me.x) ** 2 + (entity.y - me.y) ** 2 < 41000)) return false;
+    if (MOD.LootDataEnabled && !Object.values(LootData).some(item => item.acquire && item.id === entity.Іࡈ５)) return false;
+    return __send([12, entity.id]);
   }
   function building(r) {
     if (r.type === B.categories.player || r.type === B.categories.loot || r.type === 13) return null;
@@ -1491,7 +1468,6 @@ function __installDevastMod(B) {
     updateReconnect(now);
     if (!playing()) {
       lastSentAngle = null;
-      pendingLoot.clear();
       if (previousPlayer) {
         Aimbot.onDeath();
         previousPlayer = 0;
@@ -1782,6 +1758,7 @@ function __installDevastMod(B) {
     step,
     setSetting,
     openUnderMouse,
+    fastLoot,
     clanColor,
     prepareClanTag,
     playerLabel,
@@ -1792,7 +1769,6 @@ function __installDevastMod(B) {
     render(now = performance.now()) {
       if (stopped) return;
       try {
-        scanFastLoot(now);
         draw();
       } catch (e) {
         report(e);
@@ -1815,7 +1791,6 @@ function __installDevastMod(B) {
       MOD.AimBotEnabled = false;
       stopped = true;
       window.clearInterval(aimTimer);
-      pendingLoot.clear();
       window.cancelAnimationFrame(nextFrame);
       removers.forEach(f => f());
       if (menu) menu.destroy();
