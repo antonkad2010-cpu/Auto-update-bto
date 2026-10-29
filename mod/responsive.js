@@ -103,12 +103,12 @@ function __installDevastMod(B) {
     }
   }
   class GetTarget {
-    constructor(id) { this.id=id; this.x=-1; this.y=-1; this.prevX=[-1,-1,-1]; this.prevY=[-1,-1,-1]; this.active=false; this.weapon=-1; this.gear=-1; }
+    constructor(id) { this.id=id; this.x=-1; this.y=-1; this.prevX=[-1,-1,-1]; this.prevY=[-1,-1,-1]; this.active=false; this.weapon=-1; this.gear=-1; this.revision=0; }
     update(x,y) {
       if (!Number.isFinite(x) || !Number.isFinite(y)) return;
       this.prevX[2]=this.prevX[1]; this.prevX[1]=this.prevX[0]; this.prevX[0]=this.x;
       this.prevY[2]=this.prevY[1]; this.prevY[1]=this.prevY[0]; this.prevY[0]=this.y;
-      this.x=x; this.y=y; this.active=true;
+      this.x=x; this.y=y; this.active=true; this.revision++;
     }
     setInactive() { this.x=-1; this.y=-1; this.prevX.fill(-1); this.prevY.fill(-1); this.active=false; GetAllTargets.resetLines(); }
   }
@@ -875,14 +875,14 @@ function __installDevastMod(B) {
     return B.network.state === 1 && B.world.ᅠᏧ‍ && B.world.ᅠᏧ‍.id > 0;
   }
   let lastSentAngle = null;
-  function __send(value, forceAngle = false) {
+  function __send(value) {
     if (!playing()) return false;
     const packet = typeof value === 'string' ? JSON.parse(value) : value;
     if (!Array.isArray(packet) || packet.length === 0 || packet.some(x => typeof x !== 'number' || !Number.isFinite(x))) return false;
     if (packet[0] === 6) {
       if (packet.length !== 2) return false;
       packet[1] = (Math.round(packet[1]) % 360 + 360) % 360;
-      if (!forceAngle && packet[1] === lastSentAngle) {
+      if (packet[1] === lastSentAngle) {
         diagnostics.deduplicatedAngles++;
         return true;
       }
@@ -917,6 +917,7 @@ function __installDevastMod(B) {
     if (key === 'SAutoLootEnabled' && value) MOD.FAutoLootEnabled = false;
     if (key === 'FAutoLootEnabled' && value) MOD.SAutoLootEnabled = false;
     if (key === 'AimBotEnabled' && !value) {
+      lastSentAngle = null;
       Aimbot.targetPlayer = null;
       GetAllTargets.lines.forEach(l => l.reset(-1, -1, -1, -1));
     }
@@ -968,14 +969,21 @@ function __installDevastMod(B) {
     if (MOD.visualizeResolving) GetAllTargets.lines[0].reset(self.x, self.y, x, y);
     return Math.round(this.lastAngle);
   };
+  const lastAutoFireUpdates = new WeakMap();
   Aimbot.refresh = function () {
-    if (!playing() || this.isDead()) return;
+    if (!playing() || this.isDead()) { lastSentAngle = null; return; }
     GetAllTargets.lastId = B.world.ᅠᏧ‍.id;
-    if (!MOD.AimBotEnabled) return;
+    if (!MOD.AimBotEnabled) { lastSentAngle = null; return; }
     const angle = this.resolve();
-    if (!this.targetPlayer) return;
-    __send([6, angle], true);
-    if (MOD.autoFire && this.wannaFire()) { __send([4]); __send([5]); }
+    if (!this.targetPlayer) { lastSentAngle = null; return; }
+    __send([6, angle]);
+    // A direction change is one incoming update, even if several timer ticks
+    // run before the next packet. Do not replay that same fire event.
+    const target = this.targetPlayer;
+    if (MOD.autoFire && this.wannaFire() && lastAutoFireUpdates.get(target) !== target.revision) {
+      __send([4]); __send([5]);
+      lastAutoFireUpdates.set(target, target.revision);
+    }
   };
   function trackPacket(type, playerId, uid, x, y, active) {
     const group = type === B.categories.player ? GetAllTargets.players : type === 13 ? GetAllTargets.ghouls : null;
@@ -984,6 +992,7 @@ function __installDevastMod(B) {
     if (!group[id]) group[id] = new GetTarget(id);
     const players = type === B.categories.player, index = players ? activePlayers : activeGhouls;
     if (!active) {
+      if (group[id] === Aimbot.targetPlayer || type === B.categories.player && id === B.world.ᅠᏧ‍.id) lastSentAngle = null;
       if (index.delete(id)) { if (players) activePlayerCache = null; else activeGhoulCache = null; }
       group[id].setInactive(); return;
     }

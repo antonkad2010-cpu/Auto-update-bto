@@ -66,7 +66,7 @@ test('ghoul UID uses the same native packet bridge',()=>{
   const f=setup();f.packet([{pid:1,x:500,y:500},{pid:0,uid:7,type:13,x:550,y:600}]);f.api.setSetting('target','ghouls');f.api.targets.mouseMapCords={x:550,y:600};f.tick();assert.equal(f.api.aim.targetPlayer.id,7);f.packet([{pid:0,uid:7,type:13,active:false}]);assert.equal(f.api.targets.ghouls[7].active,false);
 });
 
-test('500 packet-driven ILM scenarios match the original selection, lead line and autofire',()=>{
+test('500 packet-driven ILM scenarios match the original selection, lead line and autofire condition',()=>{
   const oracle=require('./fixtures/ilm-aim-oracle');const f=setup();
   f.packet([{pid:1,x:1000,y:1000},{pid:2,x:1300,y:1000},{pid:3,x:900,y:1500},{pid:0,uid:7,type:13,x:600,y:800}]);
   const targets={...f.api.targets,players:Array.from(f.api.targets.players,x=>x||{active:false}),ghouls:Array.from(f.api.targets.ghouls,x=>x||{active:false}),getPlayerById(id){return this.players[id]}};
@@ -115,7 +115,7 @@ test('large sparse IDs do not cause array scans during aim; ties keep original o
 
 test('bullet speed scales lead monotonically; line and sent angle use the same prediction',()=>{
   const f=setup();f.packet([{pid:1,x:500,y:500},{pid:2,x:1000,y:500}]);f.packet([{pid:2,x:1000,y:520}]);
-  f.api.settings.lockId=2;const leads=[];
+  f.api.settings.lockId=2;const leads=[];let lastNetworkAngle=null;
   for(const speed of [1,2,4,8,15]){
     f.api.setSetting('bulletSpeedCoefficient',speed);f.sent.length=0;f.tick();
     const line=f.api.targets.lines[0],lead=line.y2-520;
@@ -123,7 +123,8 @@ test('bullet speed scales lead monotonically; line and sent angle use the same p
     // Use the actual distance, including the latest target Y.
     const expected=(Math.hypot(500,20)/300*(4/speed)+.1)*20;
     assert.ok(Math.abs(lead-expected)<1e-9);
-    assert.deepEqual(f.sent,[[6,(Math.round(Math.atan2(line.y2-line.y1,line.x2-line.x1)*180/Math.PI)+360)%360]]);
+    const networkAngle=(Math.round(Math.atan2(line.y2-line.y1,line.x2-line.x1)*180/Math.PI)+360)%360;
+    assert.deepEqual(f.sent,networkAngle===lastNetworkAngle?[]:[[6,networkAngle]]);lastNetworkAngle=networkAngle;
   }
   assert.ok(leads.every((value,i)=>i===0||value<leads[i-1]));
 });
@@ -144,4 +145,36 @@ test('invalid aim coefficients cannot introduce infinite or inverted predictions
   const f=setup();for(const [key,values]of Object.entries({distanceCoefficient:[0,-1,1001],bulletSpeedCoefficient:[0,-1,16],offsetCoefficient:[-1,4]})){
     const previous=f.api.settings[key];for(const value of values)assert.throws(()=>f.api.setSetting(key,value));assert.equal(f.api.settings[key],previous);
   }
+});
+
+test('unchanged aim is sent once, while changed prediction still updates the network angle',()=>{
+ const f=setup();f.packet([{pid:1,x:500,y:500},{pid:2,x:800,y:500}]);
+ f.api.targets.mouseMapCords={x:800,y:500};
+ for(let i=0;i<20;i++)f.tick();
+ assert.deepEqual(f.sent,[[6,0]]);assert.equal(f.api.diagnostics.deduplicatedAngles,19);
+ f.packet([{pid:2,x:800,y:520}]);f.tick();
+ const line=f.api.targets.lines[0];
+ assert.equal(f.sent.length,2);assert.equal(f.sent[1][1],(Math.round(Math.atan2(line.y2-line.y1,line.x2-line.x1)*180/Math.PI)+360)%360);
+});
+
+test('manual aim handoff invalidates cached angle before identical prediction is reacquired',()=>{
+ const f=setup();f.packet([{pid:1,x:500,y:500},{pid:2,x:800,y:500}]);f.api.targets.mouseMapCords={x:800,y:500};f.tick();
+ // Native mouse input can change the server angle after a target disappears.
+ // Remove and re-add between ticks, so no inactive tick can reset the cache.
+ f.packet([{pid:2,active:false}]);f.sent.push([6,90]);f.packet([{pid:2,x:800,y:500}]);f.tick();
+ assert.deepEqual(f.sent,[[6,0],[6,90],[6,0]]);
+ f.api.setSetting('AimBotEnabled',false);f.sent.push([6,180]);f.api.setSetting('AimBotEnabled',true);f.tick();
+ assert.deepEqual(f.sent.slice(-2),[[6,180],[6,0]]);
+ f.api.targets.mouseMapCords={x:0,y:0};f.api.setSetting('mouseFov',1);f.tick();f.sent.push([6,270]);
+ f.api.targets.mouseMapCords={x:800,y:500};f.tick();assert.deepEqual(f.sent.slice(-2),[[6,270],[6,0]]);
+});
+
+test('autofire consumes a direction-change update once, without suppressing a later change',()=>{
+ const f=setup();f.packet([{pid:1,x:500,y:500},{pid:2,x:800,y:500}]);f.packet([{pid:2,x:820,y:500}]);f.packet([{pid:2,x:800,y:500}]);
+ f.api.targets.mouseMapCords={x:800,y:500};f.api.setSetting('autoFire',true);
+ assert.equal(f.api.aim.resolve(),0);assert.equal(f.api.aim.wannaFire(),true);
+ for(let i=0;i<20;i++)f.tick();
+ assert.deepEqual(f.sent,[[6,0],[4],[5]]);
+ f.packet([{pid:2,x:820,y:500}]);f.tick();assert.deepEqual(f.sent.slice(-2),[[4],[5]]);assert.equal(f.sent.length,5);
+ f.packet([{pid:2,x:840,y:500}]);f.tick();assert.equal(f.sent.length,5);
 });
