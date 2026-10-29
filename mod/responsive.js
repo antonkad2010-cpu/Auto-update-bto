@@ -11,6 +11,7 @@ function __installDevastMod(B) {
       this.LootDataEnabled = false;
       this.AutoTakeEnabled = false;
       this.AutoBuiledEnabled = false;
+      this.BuildOnRoadEnabled = true;
       this.AntiKickEnabled = true;
       this.resolverType = "linear";
       this.ShowRealAngles = "withAim";
@@ -1637,6 +1638,7 @@ function __installDevastMod(B) {
     }, 'Reset');
     const automation = menu.addFolder('Automation');
     for (const key of ['SAutoLootEnabled', 'FAutoLootEnabled', 'LootDataEnabled', 'AutoBuiledEnabled', 'AutoTakeEnabled', 'AntiKickEnabled', 'OpenEverythingByClick']) add(automation, key);
+    add(automation, 'BuildOnRoadEnabled', 'Build on roads');
     const filter = automation.addFolder('Loot filter');
     for (const [name, item] of Object.entries(LootData)) filter.add(item, 'acquire').name(name).onChange(persist);
     const keys = menu.addFolder('Keyboard');

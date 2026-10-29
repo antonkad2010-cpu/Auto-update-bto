@@ -1,0 +1,12 @@
+{
+  "base_sha256": "ba2ec29027d11f955c7a03d12380461750a5d28cf51ac575196fbc5ac651d358",
+  "prefix": "function ⲣ︄ܔ(ρ́१)  {ㅤ༤༡ [ ρ́१.ᴀܛ٤][ρ́१.αބ̞].о‍༢=οᚃո;ㅤ༤༡[ρ́१.ᴀܛ٤][ρ́१.αބ̞].εѕ̉= ρ́१.ᴘ४１;ㅤ༤༡[ρ́१.ᴀܛ٤ ][ρ́१.αބ̞].ⲅо᠌=ᴀ︌５;var ⲥ٩ᴇ= ( ρ́१.Іࡈ５ >> 05)&іܖܙ ; var ᴑ̙̎=ιᄅᴄ[ ρ́१.Іࡈ５>> ɑߋ̆];var ᴏࡀ̞=ᴑ̋̀;ㅤ༤༡ [ ρ́१.ᴀܛ٤][ρ́१.αބ̞].ⲅо᠌=ᴑ̙̎ [ ϲࠄ̣] .ⲅо᠌;",
+  "source": "Native building renderer prefix through collision/category bookkeeping; remaining drawing code is untouched.",
+  "constants": {
+    "іܖܙ": 3,
+    "ɑߋ̆": 7,
+    "ᴑ̋̀": 1,
+    "ᴀ︌５": null,
+    "ϲࠄ̣": "detail"
+  }
+}
