@@ -1168,7 +1168,9 @@ function __installDevastMod(B) {
     return __send([12, entity.id]);
   }
   function building(r) {
-    if (r.type === B.categories.player || r.type === B.categories.loot || r.type === 13) return null;
+    // Only native construction layers encode an item ID in these bits.
+    // Resources/projectiles reuse them for unrelated subtype data.
+    if (!Number.isInteger(r.type) || r.type < 3 || r.type > 6) return null;
     const descriptor = B.items[r.e.Іࡈ５ >> 7];
     return descriptor && Number.isInteger(descriptor.ࡀ︂̄) && descriptor.ࡀ︂̄ > 0 ? descriptor : null;
   }
@@ -1181,7 +1183,7 @@ function __installDevastMod(B) {
     if (!rect.width || !rect.height || cursor.x < rect.left || cursor.y < rect.top || cursor.x >= rect.left + rect.width || cursor.y >= rect.top + rect.height) return false;
     mouse = cursor;
     if (!updateMouse()) return false;
-    const point = GetAllTargets.mouseMapCords, x = Math.floor(point.x / 100), y = Math.floor(point.y / 100);
+    const point = GetAllTargets.mouseMapCords, x = Math.floor(Math.round(point.x) / 100), y = Math.floor(Math.round(point.y) / 100);
     // Inspect live entities at click time; never use the native nearest-to-player target.
     let selected = null, descriptor = null, nearest = Infinity;
     for (const r of collect()) {
