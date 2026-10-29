@@ -24,3 +24,17 @@ The complete patched bundle passed syntax checks, 39 JavaScript tests and
 9 Python tests, and entered/reentered Frankfurt without JavaScript errors.
 Actual placement on a radioactive-city road acknowledged by the server has not
 been verified. Client permission must not be described as server acceptance.
+
+## Additional placement-path verification
+
+The test now also executes the full native preview function `ιᴀ‍` and native
+mouse handler `αᚊܛ`, extracted from the pinned client. Nine combinations cover
+blueprint layers 0, 1 and 2 with road permission enabled, disabled and a wall in
+the same cell. They verify the actual `[14, rotation, row, column]` packet and
+preserve the native layer-2 furniture/wall overlap rule. This is a local client
+protocol check, not a real server acknowledgement.
+
+A live Frankfurt session was also used to move, gather wood and look for roads.
+No road entities were found in the inspected areas; the test character died and
+respawned before a construction attempt. There is still no live road-placement
+confirmation. Exact city coordinates/server are needed for a targeted trial.
