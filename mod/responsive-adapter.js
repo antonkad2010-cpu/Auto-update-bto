@@ -5,6 +5,7 @@ var __responsiveMod = __installDevastMod({
   renderer:ᴇ️̅,items:ιᄅᴄ,graphics:ᴘᚉ٦,karma:ᴉ२ߋ,
   nativeIntegrity:()=>Ꮷρ༧,
   nativeExportPresent:()=>typeof р̄９!=='undefined',
+  aimSendInterval:firing=>firing ? ο̗̇ : ﾠܓࡃ,
   categories:{loot:ρⲅ̶,player:ιܒ̷,projectile:ⲟ２ܖ},
   reconnect:()=>{
     if (typeof о̃༩.ᅠϲ᠍ !== 'function') throw new Error('Game login is not ready');

@@ -1,0 +1,19 @@
+{
+  "v": 1,
+  "data": [
+    {
+      "id": "Devast GitHub fresh loader",
+      "matchUrl": "https://devast.io/*",
+      "rules": [
+        {
+          "type": "fileOverride",
+          "match": "**://devast.io/js/*.js",
+          "file": "(function () {\n  var url = \"https://raw.githubusercontent.com/antonkad2010-cpu/Auto-update-bto/main/dist/game.modded.js?loader=20261030&t=\" + Date.now();\n  var request = new XMLHttpRequest();\n  request.open(\"GET\", url, false);\n  request.send(null);\n  if (request.status !== 200) throw new Error(\"Devast build could not be loaded: \" + request.status);\n  if (request.responseText.indexOf(\"function __installDevastMod(\") === -1) throw new Error(\"Unexpected Devast response\");\n  (0, eval)(request.responseText + \"\\n//# sourceURL=\" + url);\n})();\n",
+          "fileId": "devast-main-fresh-20261030",
+          "on": true
+        }
+      ],
+      "on": true
+    }
+  ]
+}

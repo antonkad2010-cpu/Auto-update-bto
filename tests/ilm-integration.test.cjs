@@ -9,12 +9,12 @@ const packetFixture=require('./fixtures/ilm-current-packet.json');
 const manifest=JSON.parse(fs.readFileSync(path.join(root,'patches/responsive.json'),'utf8'));
 
 function setup(){
-  const sent=[],timers=[];let nativeCalls=0, nativeSender=null;
+  const sent=[],timers=[],deadlines=new Map();let nativeCalls=0, nativeSender=null, now=0, nextTimeout=1;
   const network={state:1,ᴎᚂρ(s){if(nativeSender)return nativeSender(s);sent.push(JSON.parse(s))},ѕ᠋༢(){nativeCalls++},ρ٨٨(){nativeCalls++}};
   const world={ᅠᏧ‍:{id:1},ᴎ︃ᄉ:Array.from({length:121},()=>({а༤̘:-1})),ﾠࡅ‍:[]};
   const B={network,world,categories:{player:0,loot:1,projectile:2}};
-  const window={addEventListener(){},removeEventListener(){},requestAnimationFrame(){return 1},cancelAnimationFrame(){},setInterval(f,ms){timers.push({f,ms});return timers.length},clearInterval(){}};
-  const context=vm.createContext({window,B,console,performance:{now:()=>0},localStorage:{getItem(){return null},setItem(){}},document:{readyState:'loading',getElementById(){return null}}});
+  const window={addEventListener(){},removeEventListener(){},requestAnimationFrame(){return 1},cancelAnimationFrame(){},setInterval(f,ms){timers.push({f,ms});return timers.length},clearInterval(){},setTimeout(fn,delay){const id=nextTimeout++;deadlines.set(id,{fn,at:now+delay});return id},clearTimeout(id){deadlines.delete(id)}};
+  const context=vm.createContext({window,B,console,performance:{now:()=>now},localStorage:{getItem(){return null},setItem(){}},document:{readyState:'loading',getElementById(){return null}}});
   const api=vm.runInContext(runtime+'\n__installDevastMod(B)',context);
   let decoder=packetFixture.source;
   assert.equal(packetFixture.base_sha256,manifest.base_sha256);
@@ -38,7 +38,17 @@ function setup(){
     decode(buffer,bytes,key);
   }
   api.setSetting('AimBotEnabled',true);
-  return {api,B,sent,packet,tick:timers[0].f,network,context,useNativeSender(sender){nativeSender=sender},get nativeCalls(){return nativeCalls}};
+  function advance(ms){
+    const end=now+ms;let runs=0;
+    for(;;){
+      const next=[...deadlines.entries()].filter(([,d])=>d.at<=end).sort((a,b)=>a[1].at-b[1].at)[0];
+      if(!next)break;
+      if(++runs>100000)throw Error('Unbounded timeout loop');
+      const [id,d]=next;deadlines.delete(id);now=d.at;d.fn();
+    }
+    now=end;
+  }
+  return {api,B,sent,packet,tick(){advance(200);timers[0].f()},refresh:timers[0].f,advance,get now(){return now},get pending(){return deadlines.size},network,context,useNativeSender(sender){nativeSender=sender},get nativeCalls(){return nativeCalls}};
 }
 
 test('aim and autofire use the exact native sender and native fire command payloads without HTTP reports',()=>{
@@ -209,4 +219,87 @@ test('autofire consumes a direction-change update once, without suppressing a la
  assert.deepEqual(f.sent,[[6,0],[4],[5]]);
  f.packet([{pid:2,x:820,y:500}]);f.tick();assert.deepEqual(f.sent.slice(-2),[[4],[5]]);assert.equal(f.sent.length,5);
  f.packet([{pid:2,x:840,y:500}]);f.tick();assert.equal(f.sent.length,5);
+});
+
+function pacingFixture(){
+ const f=setup();f.api.setSetting('mouseFovEnable',false);f.api.setSetting('lockId',2);
+ f.packet([{pid:1,x:500,y:500},{pid:2,x:800,y:500}]);return f;
+}
+function lineAngle(f){const l=f.api.targets.lines[0];return (Math.round(Math.atan2(l.y2-l.y1,l.x2-l.x1)*180/Math.PI)+360)%360;}
+
+test('idle aim respects the native 150ms boundary and sends the latest prediction at one deadline',()=>{
+ const f=pacingFixture();f.refresh();assert.deepEqual(f.sent,[[6,0]]);
+ f.advance(50);f.packet([{pid:2,x:800,y:530}]);f.refresh();assert.equal(f.pending,1);assert.equal(f.sent.length,1);
+ f.advance(50);f.packet([{pid:2,x:800,y:580}]);f.refresh();assert.equal(f.pending,1);
+ f.advance(50);assert.equal(f.sent.length,1);f.advance(1);
+ assert.equal(f.sent.length,2);assert.equal(f.sent[1][1],lineAngle(f));assert.equal(f.pending,0);
+});
+
+test('held manual fire uses the native 60ms boundary without synthetic fire or release',()=>{
+ const f=pacingFixture();f.api.setSetting('autoFire',true);f.api.aim.mouseDown=true;f.refresh();
+ f.advance(50);f.packet([{pid:2,x:820,y:530}]);f.packet([{pid:2,x:800,y:520}]);f.refresh();
+ assert.equal(f.api.aim.wannaFire(),true);assert.equal(f.pending,1);
+ f.advance(10);assert.equal(f.sent.length,1);f.advance(1);
+ assert.equal(f.sent.length,2);assert.ok(f.sent.every(p=>p[0]===6));assert.equal(f.sent.at(-1)[1],lineAngle(f));
+ assert.ok(f.api.diagnostics.manualFireOwnsInput>0);
+ f.api.aim.mouseDown=false;f.advance(200);f.refresh();assert.ok(f.sent.every(p=>p[0]===6));
+});
+
+test('rapid direction changes cannot replay autofire before its native firing boundary',()=>{
+ const f=pacingFixture();f.api.setSetting('autoFire',true);
+ f.packet([{pid:2,x:820,y:500}]);f.packet([{pid:2,x:800,y:500}]);f.refresh();
+ assert.deepEqual(f.sent,[[6,0],[4],[5]]);
+ f.advance(30);f.packet([{pid:2,x:820,y:500}]);f.refresh();assert.equal(f.pending,1);assert.equal(f.sent.length,3);
+ f.advance(30);assert.equal(f.sent.length,3);f.advance(1);assert.deepEqual(f.sent.slice(-2),[[4],[5]]);assert.equal(f.sent.length,5);
+});
+
+test('a queued autofire opportunity is discarded when the next update no longer reverses direction',()=>{
+ const f=pacingFixture();f.api.setSetting('autoFire',true);
+ f.packet([{pid:2,x:820,y:500}]);f.packet([{pid:2,x:800,y:500}]);f.refresh();
+ f.advance(30);f.packet([{pid:2,x:820,y:500}]);f.refresh();assert.equal(f.pending,1);
+ f.packet([{pid:2,x:840,y:500}]);f.advance(100);assert.deepEqual(f.sent,[[6,0],[4],[5]]);
+});
+
+test('target loss, disable, disconnect, death and dispose cancel deferred aim without stale commands',()=>{
+ for(const action of ['target','disable','disconnect','death','dispose']){
+  const f=pacingFixture();f.refresh();f.advance(50);f.packet([{pid:2,x:800,y:530}]);f.refresh();assert.equal(f.pending,1,action);
+  if(action==='target')f.packet([{pid:2,active:false}]);
+  if(action==='disable')f.api.setSetting('AimBotEnabled',false);
+  if(action==='disconnect'){f.network.state=64;f.api.step(f.now);}
+  if(action==='death')f.api.onServerDeath();
+  if(action==='dispose')f.api.dispose();
+  assert.equal(f.pending,0,action);f.advance(1000);assert.deepEqual(f.sent,[[6,0]],action);
+ }
+});
+
+test('toggling aim does not reset the outgoing interval budget',()=>{
+ const f=pacingFixture();f.refresh();f.advance(10);
+ f.api.setSetting('AimBotEnabled',false);f.api.setSetting('AimBotEnabled',true);f.refresh();
+ assert.equal(f.sent.length,1);assert.equal(f.pending,1);f.advance(141);assert.deepEqual(f.sent,[[6,0],[6,0]]);
+});
+
+test('twenty simulated minutes keep manual aim bounded with no fire releases or unbounded queue',()=>{
+ const f=pacingFixture(),wire=[];f.useNativeSender(s=>wire.push({at:f.now,packet:JSON.parse(s)}));
+ f.api.setSetting('autoFire',true);f.api.aim.mouseDown=true;
+ for(let i=0;i<24000;i++){
+  f.advance(50);f.packet([{pid:2,x:800+i%7,y:480+i%53}]);f.refresh();
+  assert.ok(f.pending<=1);
+ }
+ assert.equal(f.now,1200000);assert.ok(wire.length>1000);assert.ok(wire.length<=Math.ceil(1200000/61)+1);
+ assert.ok(wire.every(x=>x.packet[0]===6));assert.ok(wire.slice(1).every((x,i)=>x.at-wire[i].at>60));
+ assert.equal(f.api.snapshotDiagnostics().events.length,256);assert.equal(f.api.diagnostics.errors.length,0);
+});
+
+test('outgoing pacing values agree with the unmodified pinned native client declarations',()=>{
+ const zlib=require('node:zlib'),crypto=require('node:crypto'),acorn=require('acorn');
+ const source=zlib.gunzipSync(fs.readFileSync(path.join(root,'baselines/current.js.gz'))).toString();
+ assert.equal(crypto.createHash('sha256').update(source).digest('hex'),manifest.base_sha256);
+ const found={};
+ function visit(n){
+  if(!n||typeof n!=='object')return;
+  if(Array.isArray(n)){for(const x of n)visit(x);return;}
+  if(n.type==='VariableDeclarator'&&['ﾠܓࡃ','ο̗̇'].includes(n.id.name))found[n.id.name]=vm.runInNewContext(source.slice(n.init.start,n.init.end));
+  for(const x of Object.values(n))if(x&&typeof x==='object')visit(x);
+ }
+ visit(acorn.parse(source,{ecmaVersion:'latest'}));assert.deepEqual(found,{'ﾠܓࡃ':150,'ο̗̇':60});
 });

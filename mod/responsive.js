@@ -844,7 +844,9 @@ function __installDevastMod(B) {
     frames: 0,
     errors: [],
     commands: 0,
-    deduplicatedAngles: 0
+    deduplicatedAngles: 0,
+    deferredAimUpdates: 0,
+    manualFireOwnsInput: 0
   };
   const connectionEvents = new Array(256);
   let connectionEventCount = 0, lastIntegrityFlag, lastDiagnosticState, lastExportPresence;
@@ -883,6 +885,7 @@ function __installDevastMod(B) {
     return {
       schemaVersion: 1,
       scope: 'Local mod commands and input; native packets are not captured',
+      aimTransport: 'native-intervals-v1',
       networkState: B.network.state,
       nativeIntegrityFlag: nativeIntegrityFlag(),
       nativeExportPresent: nativeExportPresence(),
@@ -897,6 +900,8 @@ function __installDevastMod(B) {
       },
       commands: diagnostics.commands,
       deduplicatedAngles: diagnostics.deduplicatedAngles,
+      deferredAimUpdates: diagnostics.deferredAimUpdates,
+      manualFireOwnsInput: diagnostics.manualFireOwnsInput,
       errorCount: diagnostics.errors.length,
       reconnectEndedByServer: reconnect.endedByServer,
       events: Array.from({length: count}, (_, i) => ({...connectionEvents[(start + i) % connectionEvents.length]}))
@@ -938,6 +943,32 @@ function __installDevastMod(B) {
     return B.network.state === 1 && B.world.ᅠᏧ‍ && B.world.ᅠᏧ‍.id > 0;
   }
   let lastSentAngle = null;
+  let lastAimSentAt = -Infinity, lastAutoFireSentAt = -Infinity;
+  let aimRetry = null, aimRetryAt = Infinity;
+  function aimSendInterval(firing) {
+    const interval = B.aimSendInterval ? B.aimSendInterval(firing) : firing ? 60 : 150;
+    if (!Number.isFinite(interval) || interval < 0) throw new Error('Native aim timing unavailable');
+    return interval;
+  }
+  function cancelAimRetry() {
+    if (aimRetry !== null) window.clearTimeout(aimRetry);
+    aimRetry = null;
+    aimRetryAt = Infinity;
+  }
+  function retryAimAfter(delay, now) {
+    // Only one deadline exists. Recompute the current target when it expires,
+    // rather than replaying an angle or shot captured before an update/death.
+    const wait = Math.max(1, Math.ceil(delay) + 1), deadline = now + wait;
+    if (aimRetry !== null && aimRetryAt <= deadline) return;
+    cancelAimRetry();
+    aimRetryAt = deadline;
+    aimRetry = window.setTimeout(() => {
+      aimRetry = null;
+      aimRetryAt = Infinity;
+      if (stopped) return;
+      try { Aimbot.refresh(); } catch (error) { report(error); }
+    }, wait);
+  }
   function __send(value) {
     if (!playing()) return false;
     const packet = typeof value === 'string' ? JSON.parse(value) : value;
@@ -954,6 +985,19 @@ function __installDevastMod(B) {
     if (packet[0] === 6) lastSentAngle = packet[1];
     diagnostics.commands++;
     connectionEvent('mod-command', {opcode: packet[0], ...(packet[0] === 6 ? {angle: packet[1]} : {})});
+    return true;
+  }
+  function sendAimAngle(angle, firing, now) {
+    const normalized = (Math.round(angle) % 360 + 360) % 360;
+    const changed = normalized !== lastSentAngle;
+    const remaining = aimSendInterval(firing) - (now - lastAimSentAt);
+    if (changed && remaining >= 0) {
+      diagnostics.deferredAimUpdates++;
+      retryAimAfter(remaining, now);
+      return false;
+    }
+    if (!__send([6, normalized])) return false;
+    if (changed) lastAimSentAt = now;
     return true;
   }
   function persist() {
@@ -984,6 +1028,7 @@ function __installDevastMod(B) {
     if (key === 'SAutoLootEnabled' && value) MOD.FAutoLootEnabled = false;
     if (key === 'FAutoLootEnabled' && value) MOD.SAutoLootEnabled = false;
     if (key === 'AimBotEnabled' && !value) {
+      cancelAimRetry();
       lastSentAngle = null;
       Aimbot.targetPlayer = null;
       GetAllTargets.lines.forEach(l => l.reset(-1, -1, -1, -1));
@@ -1038,17 +1083,29 @@ function __installDevastMod(B) {
   };
   const lastAutoFireUpdates = new WeakMap();
   Aimbot.refresh = function () {
-    if (!playing() || this.isDead()) { lastSentAngle = null; return; }
+    if (stopped || !playing() || this.isDead()) { cancelAimRetry(); lastSentAngle = null; return; }
     GetAllTargets.lastId = B.world.ᅠᏧ‍.id;
-    if (!MOD.AimBotEnabled) { lastSentAngle = null; return; }
+    if (!MOD.AimBotEnabled) { cancelAimRetry(); lastSentAngle = null; return; }
     const angle = this.resolve();
-    if (!this.targetPlayer) { lastSentAngle = null; return; }
-    __send([6, angle]);
+    if (!this.targetPlayer) { cancelAimRetry(); lastSentAngle = null; return; }
     // A direction change is one incoming update, even if several timer ticks
     // run before the next packet. Do not replay that same fire event.
     const target = this.targetPlayer;
-    if (MOD.autoFire && this.wannaFire() && lastAutoFireUpdates.get(target) !== target.revision) {
+    const wantsFire = MOD.autoFire && this.wannaFire();
+    const now = performance.now();
+    const angleReady = sendAimAngle(angle, this.mouseDown || wantsFire, now);
+    if (wantsFire && lastAutoFireUpdates.get(target) !== target.revision) {
+      // A synthetic release must never interrupt the user's held fire button.
+      if (this.mouseDown) {
+        lastAutoFireUpdates.set(target, target.revision);
+        diagnostics.manualFireOwnsInput++;
+        return;
+      }
+      if (!angleReady) return;
+      const remaining = aimSendInterval(true) - (now - lastAutoFireSentAt);
+      if (remaining >= 0) { retryAimAfter(remaining, now); return; }
       __send([4]); __send([5]);
+      lastAutoFireSentAt = now;
       lastAutoFireUpdates.set(target, target.revision);
     }
   };
@@ -1059,7 +1116,10 @@ function __installDevastMod(B) {
     if (!group[id]) group[id] = new GetTarget(id);
     const players = type === B.categories.player, index = players ? activePlayers : activeGhouls;
     if (!active) {
-      if (group[id] === Aimbot.targetPlayer || type === B.categories.player && id === B.world.ᅠᏧ‍.id) lastSentAngle = null;
+      if (group[id] === Aimbot.targetPlayer || type === B.categories.player && id === B.world.ᅠᏧ‍.id) {
+        cancelAimRetry();
+        lastSentAngle = null;
+      }
       if (index.delete(id)) { if (players) activePlayerCache = null; else activeGhoulCache = null; }
       group[id].setInactive(); return;
     }
@@ -1465,6 +1525,7 @@ function __installDevastMod(B) {
     endedByServer: false
   };
   function onServerDeath() {
+    cancelAimRetry();
     connectionEvent('native-death', {
       nativeIntegrityFlag: nativeIntegrityFlag(),
       nativeExportPresent: nativeExportPresence(),
@@ -1569,6 +1630,7 @@ function __installDevastMod(B) {
     sampleConnectionState();
     updateReconnect(now);
     if (!playing()) {
+      cancelAimRetry();
       lastSentAngle = null;
       if (previousPlayer) {
         Aimbot.onDeath();
@@ -1917,6 +1979,7 @@ function __installDevastMod(B) {
       MOD.zoomFactor = 1;
       MOD.AimBotEnabled = false;
       stopped = true;
+      cancelAimRetry();
       window.clearInterval(aimTimer);
       window.cancelAnimationFrame(nextFrame);
       removers.forEach(f => f());

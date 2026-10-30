@@ -87,6 +87,9 @@ test('production adapter exposes a live read-only integrity status',()=>{
   const context=vm.createContext({window:{},document:{},__installDevastMod:b=>b});
   vm.runInContext('var а०̅={},εᚇ๓={},еܞ︌={},о̃༩={},ρ̃५={},ι‌̵={},ᴇ️̅={},ιᄅᴄ={},ᴘᚉ٦={},ᴉ२ߋ={},ρⲅ̶=0,ιܒ̷=1,ⲟ２ܖ=2,Ꮷρ༧=0;',context);
   vm.runInContext(adapter,context);
+  vm.runInContext('var ﾠܓࡃ=0226,ο̗̇=60;',context);
+  assert.equal(vm.runInContext('window.__devastMod.aimSendInterval(false)',context),150);
+  assert.equal(vm.runInContext('window.__devastMod.aimSendInterval(true)',context),60);
   assert.equal(vm.runInContext('window.__devastMod.nativeIntegrity()',context),0);
   vm.runInContext('Ꮷρ༧=1;',context);
   assert.equal(vm.runInContext('window.__devastMod.nativeIntegrity()',context),1);
@@ -102,8 +105,8 @@ test('ILM target selection, angles and auto fire match extracted original',()=>{
   const sent=[];const network={state:1,ᴎᚂρ(x){sent.push(JSON.parse(x))},ѕ᠋༢(){},ρ٨٨(){}};
   const canvas={width:1000,height:1000,addEventListener(){},removeEventListener(){},getBoundingClientRect(){return {width:1000,height:1000,left:0,top:0}}};
   const B={network,world:{ᅠᏧ‍:{id:1},ᴎ︃ᄉ:[null,{а༤̘:-1},{а༤̘:-1},{а༤̘:-1}],ﾠࡅ‍:[]},categories:{player:0},graphics:{options:{}},view:()=>({ctx:{canvas},x:0,y:0,scale:1})};
-  let aimTick, aimInterval, cleared=false;const window={Math,JSON,addEventListener(){},removeEventListener(){},requestAnimationFrame(){return 1},cancelAnimationFrame(){},setInterval(fn,ms){aimTick=fn;aimInterval=ms;return 42},clearInterval(id){cleared=id===42}};
-  const ctx=vm.createContext({window,document:{readyState:'loading',getElementById(){return canvas}},localStorage:{getItem(){return null},setItem(){}},performance:{now:()=>100},console,B});
+  let aimTick, aimInterval, cleared=false,now=100;const window={Math,JSON,addEventListener(){},removeEventListener(){},requestAnimationFrame(){return 1},cancelAnimationFrame(){},setInterval(fn,ms){aimTick=fn;aimInterval=ms;return 42},clearInterval(id){cleared=id===42}};
+  const ctx=vm.createContext({window,document:{readyState:'loading',getElementById(){return canvas}},localStorage:{getItem(){return null},setItem(){}},performance:{now:()=>now},console,B});
   const api=vm.runInContext(source+'\n__installDevastMod(B)',ctx);
   api.trackPacket(0,1,0,500,500,true);api.trackPacket(0,2,0,800,500,true);api.trackPacket(0,2,0,820,510,true);api.trackPacket(0,3,0,600,800,true);
   api.targets.mouseMapCords={x:810,y:505};
@@ -113,7 +116,7 @@ test('ILM target selection, angles and auto fire match extracted original',()=>{
     Object.assign(api.settings,config);const expected=reference.resolve(),actual=api.aim.resolve();assert.equal(actual,expected);assert.equal(api.aim.targetPlayer.id,reference.targetPlayer.id);assert.equal(api.aim.wannaFire(),reference.wannaFire());
   }
   api.settings.AimBotEnabled=true;api.settings.autoFire=true;api.trackPacket(0,2,0,780,510,true);assert.equal(aimInterval,50);aimTick();assert.deepEqual(sent.map(packet=>packet[0]),[6,4,5]);
-  sent.length=0;api.settings.autoFire=false;api.trackPacket(0,2,0,780,100,true);const negative=reference.resolve();assert.ok(negative<0);assert.equal(api.aim.resolve(),negative);aimTick();assert.equal(sent[0][1],(negative%360+360)%360);
+  sent.length=0;api.settings.autoFire=false;now+=200;api.trackPacket(0,2,0,780,100,true);const negative=reference.resolve();assert.ok(negative<0);assert.equal(api.aim.resolve(),negative);aimTick();assert.equal(sent[0][1],(negative%360+360)%360);
   api.trackPacket(0,2,0,0,0,false);assert.equal(api.targets.players[2].active,false);api.dispose();assert.equal(cleared,true);
 });
 
