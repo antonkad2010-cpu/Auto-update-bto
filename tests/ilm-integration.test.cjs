@@ -9,8 +9,8 @@ const packetFixture=require('./fixtures/ilm-current-packet.json');
 const manifest=JSON.parse(fs.readFileSync(path.join(root,'patches/responsive.json'),'utf8'));
 
 function setup(){
-  const sent=[],timers=[];let nativeCalls=0;
-  const network={state:1,ᴎᚂρ(s){sent.push(JSON.parse(s))},ѕ᠋༢(){nativeCalls++},ρ٨٨(){nativeCalls++}};
+  const sent=[],timers=[];let nativeCalls=0, nativeSender=null;
+  const network={state:1,ᴎᚂρ(s){if(nativeSender)return nativeSender(s);sent.push(JSON.parse(s))},ѕ᠋༢(){nativeCalls++},ρ٨٨(){nativeCalls++}};
   const world={ᅠᏧ‍:{id:1},ᴎ︃ᄉ:Array.from({length:121},()=>({а༤̘:-1})),ﾠࡅ‍:[]};
   const B={network,world,categories:{player:0,loot:1,projectile:2}};
   const window={addEventListener(){},removeEventListener(){},requestAnimationFrame(){return 1},cancelAnimationFrame(){},setInterval(f,ms){timers.push({f,ms});return timers.length},clearInterval(){}};
@@ -38,8 +38,40 @@ function setup(){
     decode(buffer,bytes,key);
   }
   api.setSetting('AimBotEnabled',true);
-  return {api,B,sent,packet,tick:timers[0].f,network,get nativeCalls(){return nativeCalls}};
+  return {api,B,sent,packet,tick:timers[0].f,network,context,useNativeSender(sender){nativeSender=sender},get nativeCalls(){return nativeCalls}};
 }
+
+test('aim and autofire use the exact native sender and native fire command payloads without HTTP reports',()=>{
+  const f=setup(), native=require('./fixtures/native-fire-commands.json'),wire=[];
+  assert.equal(native.base_sha256,manifest.base_sha256);
+  Object.assign(f.context,native.constants,{
+    ϲ１٤:1000,оࠄ٠:0,
+    ᴇ٣٠:{ոᄃо:packet=>packet},
+    ᴄ༨७:packet=>wire.push(JSON.parse(JSON.stringify(packet))),
+    fetch(){throw Error('Unexpected HTTP request')},
+    XMLHttpRequest(){throw Error('Unexpected HTTP request')},
+    navigator:{sendBeacon(){throw Error('Unexpected beacon')}}
+  });
+  const sender=vm.runInContext('('+native.functions.sender+')',f.context);
+  f.useNativeSender(sender);
+  f.packet([{pid:1,x:500,y:500},{pid:2,x:800,y:500}]);
+  f.api.targets.mouseMapCords={x:800,y:500};
+  for(let i=0;i<200;i++){
+    const x=800+i%7,y=500+i%11;
+    f.packet([{pid:2,x,y}]);f.api.targets.mouseMapCords={x,y};f.tick();
+  }
+  assert.ok(wire.length>0);assert.ok(wire.every(p=>p.length===2&&p[0]===6&&Number.isInteger(p[1])&&p[1]>=0&&p[1]<360));
+  wire.length=0;
+  vm.runInContext('('+native.functions.start+')()',f.context);
+  vm.runInContext('('+native.functions.end+')()',f.context);
+  const nativeFire=wire.splice(0);
+  assert.deepEqual(nativeFire,[[4],[5]]);
+  f.api.setSetting('autoFire',true);
+  f.packet([{pid:2,x:760,y:520}]);f.api.targets.mouseMapCords={x:760,y:520};f.tick();
+  assert.deepEqual(wire.filter(p=>p[0]!==6),nativeFire);
+  assert.ok(wire.every(p=>[4,5,6].includes(p[0])));
+  f.api.setSetting('AimBotEnabled',false);wire.length=0;f.tick();assert.equal(wire.length,0);
+});
 
 test('current encrypted game packets feed ILM destination history and outgoing aim',()=>{
   const f=setup();

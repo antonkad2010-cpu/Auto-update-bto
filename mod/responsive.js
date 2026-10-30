@@ -846,6 +846,69 @@ function __installDevastMod(B) {
     commands: 0,
     deduplicatedAngles: 0
   };
+  const connectionEvents = new Array(256);
+  let connectionEventCount = 0, lastIntegrityFlag, lastDiagnosticState, lastExportPresence;
+  function nativeIntegrityFlag() {
+    try {
+      const flag = B.nativeIntegrity && B.nativeIntegrity();
+      return flag === 0 || flag === 1 ? flag : null;
+    } catch (_) { return null; }
+  }
+  function nativeExportPresence() {
+    try {
+      const present = B.nativeExportPresent && B.nativeExportPresent();
+      return typeof present === 'boolean' ? present : null;
+    } catch (_) { return null; }
+  }
+  function connectionEvent(event, details = {}) {
+    connectionEvents[connectionEventCount++ % connectionEvents.length] = {
+      tMs: Math.round(performance.now()), event, ...details
+    };
+  }
+  function sampleConnectionState() {
+    const flag = nativeIntegrityFlag(), state = B.network.state, exported = nativeExportPresence();
+    if (flag !== lastIntegrityFlag || state !== lastDiagnosticState || exported !== lastExportPresence) {
+      connectionEvent('state', {networkState: state, nativeIntegrityFlag: flag, nativeExportPresent: exported});
+      lastIntegrityFlag = flag;
+      lastDiagnosticState = state;
+      lastExportPresence = exported;
+    }
+  }
+  function snapshotDiagnostics() {
+    sampleConnectionState();
+    const count = Math.min(connectionEventCount, connectionEvents.length);
+    const start = connectionEventCount - count;
+    // Explicit fields prevent credentials, chat text and arbitrary packet
+    // payloads from entering an exported report.
+    return {
+      schemaVersion: 1,
+      scope: 'Local mod commands and input; native packets are not captured',
+      networkState: B.network.state,
+      nativeIntegrityFlag: nativeIntegrityFlag(),
+      nativeExportPresent: nativeExportPresence(),
+      clientChecks: B.clientChecksRemoved === true ? 'three-client-checks-removed' : 'native',
+      aimEnabled: MOD.AimBotEnabled,
+      autoFire: MOD.autoFire,
+      manualFireHeld: !!Aimbot.mouseDown,
+      coefficients: {
+        distance: MOD.distanceCoefficient,
+        bulletSpeed: MOD.bulletSpeedCoefficient,
+        offset: MOD.offsetCoefficient
+      },
+      commands: diagnostics.commands,
+      deduplicatedAngles: diagnostics.deduplicatedAngles,
+      errorCount: diagnostics.errors.length,
+      reconnectEndedByServer: reconnect.endedByServer,
+      events: Array.from({length: count}, (_, i) => ({...connectionEvents[(start + i) % connectionEvents.length]}))
+    };
+  }
+  function saveDiagnostics() {
+    const blob = new Blob([JSON.stringify(snapshotDiagnostics(), null, 2)], {type: 'application/json'});
+    const url = URL.createObjectURL(blob), link = document.createElement('a');
+    link.href = url;
+    link.download = 'devast-connection-diagnostics.json';
+    try { link.click(); } finally { window.setTimeout(() => URL.revokeObjectURL(url), 1000); }
+  }
   let overlay, overlayHost, ctx, menu, functionList, zoomControl, nextFrame, stopped = false, waitingKey = null;
   let lastStep = -Infinity, lastLoot = -Infinity, lastBuild = -Infinity;
   let lastTake = -Infinity, lastKeepAlive = -Infinity, lastChat = -Infinity, nextChatAt = -Infinity;
@@ -890,6 +953,7 @@ function __installDevastMod(B) {
     originalSender(JSON.stringify(packet));
     if (packet[0] === 6) lastSentAngle = packet[1];
     diagnostics.commands++;
+    connectionEvent('mod-command', {opcode: packet[0], ...(packet[0] === 6 ? {angle: packet[1]} : {})});
     return true;
   }
   function persist() {
@@ -906,6 +970,9 @@ function __installDevastMod(B) {
     const bounds = aimRanges[key];
     if (bounds && (value < bounds[0] || value > bounds[1])) throw new Error('Setting out of range: ' + key);
     MOD[key] = value;
+    if (['AimBotEnabled', 'autoFire', 'FAutoLootEnabled', 'SAutoLootEnabled', 'AntiKickEnabled'].includes(key)) {
+      connectionEvent('setting', {key, enabled: value});
+    }
     if (key === 'PlayersListEnabled' && value) { listPage = 0; lastListUpdate = -Infinity; }
     if (key === 'SpamChatEnabled') {
       chatState.status = value ? 'Waiting for game' : 'Off';
@@ -1394,13 +1461,34 @@ function __installDevastMod(B) {
     next: 0,
     pending: false,
     generation: 0,
-    lastState: null
+    lastState: null,
+    endedByServer: false
   };
+  function onServerDeath() {
+    connectionEvent('native-death', {
+      nativeIntegrityFlag: nativeIntegrityFlag(),
+      nativeExportPresent: nativeExportPresence(),
+      aimEnabled: MOD.AimBotEnabled,
+      autoFire: MOD.autoFire,
+      manualFireHeld: !!Aimbot.mouseDown
+    });
+    // Opcode 5 ends this life. The later socket close must not turn it into
+    // a transport retry, including a refresh callback already in flight.
+    reconnect.armed = false;
+    reconnect.pending = false;
+    reconnect.next = 0;
+    reconnect.generation++;
+    reconnect.endedByServer = true;
+    reconnect.status = 'Server ended this life; use Play to join again';
+    lastSentAngle = null;
+    Aimbot.onDeath();
+  }
   function updateReconnect(now) {
     const n = B.network;
     const previousState = reconnect.lastState;
     reconnect.lastState = n.state;
     if (n.state === 1) {
+      reconnect.endedByServer = false;
       reconnect.status = 'Connected';
       reconnect.attempts = 0;
       reconnect.armed = true;
@@ -1415,6 +1503,7 @@ function __installDevastMod(B) {
       // keeps its lock until its callback or deadline; frame ticks cannot
       // turn one login into overlapping requests.
       if ((previousState === null || (previousState & 2) === 0) && !reconnect.pending) {
+        reconnect.endedByServer = false;
         reconnect.attempts = 0;
         reconnect.next = 0;
         reconnect.generation++;
@@ -1477,6 +1566,7 @@ function __installDevastMod(B) {
   }
   function step(now = performance.now()) {
     diagnostics.frames++;
+    sampleConnectionState();
     updateReconnect(now);
     if (!playing()) {
       lastSentAngle = null;
@@ -1526,10 +1616,12 @@ function __installDevastMod(B) {
   for (const key of ["ѕ᠋༢", "ρ٨٨"]) {
     if (typeof B.network[key] !== 'function') throw new Error('Missing native angle handler');
   }
+  const capturedModKeys = new Set();
   function keyboard(e) {
     if (waitingKey) {
       e.preventDefault();
       e.stopImmediatePropagation();
+      capturedModKeys.add(e.code);
       MOD[waitingKey] = e.code;
       waitingKey = null;
       persist();
@@ -1537,7 +1629,7 @@ function __installDevastMod(B) {
       return;
     }
     const t = e.target;
-    if (e.repeat || t && (t.isContentEditable || (/^(INPUT|TEXTAREA|SELECT)$/).test(t.tagName)) || B.chatActive && B.chatActive()) return;
+    if (t && (t.isContentEditable || (/^(INPUT|TEXTAREA|SELECT|BUTTON)$/).test(t.tagName)) || B.chatActive && B.chatActive()) return;
     const bindings = {
       AimbotKey: 'AimBotEnabled',
       AutoBuiledKey: 'AutoBuiledEnabled',
@@ -1548,15 +1640,28 @@ function __installDevastMod(B) {
       PlayersListKey: 'PlayersListEnabled',
     };
     if (e.code === MOD.ModMenuKey) {
-      if (menu) menu.domElement.style.display = menu.domElement.style.display === 'none' ? '' : 'none';
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      capturedModKeys.add(e.code);
+      if (!e.repeat && menu) menu.domElement.style.display = menu.domElement.style.display === 'none' ? '' : 'none';
       return;
     }
     for (const [key, setting] of Object.entries(bindings)) if (e.code === MOD[key]) {
-      setSetting(setting, !MOD[setting]);
-      break;
+      // A mod binding owns this key, including repeats. In particular Space
+      // must not also reach the game's interaction/pickup handler.
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      capturedModKeys.add(e.code);
+      if (!e.repeat) setSetting(setting, !MOD[setting]);
+      return;
     }
   }
   listen(window, 'keydown', keyboard, true);
+  listen(window, 'keyup', e => {
+    if (!capturedModKeys.delete(e.code)) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  }, true);
   listen(window, 'mousemove', e => { mouse = {x:e.clientX, y:e.clientY}; }, true);
   let interceptedRightClick = false;
   listen(window, 'mousedown', e => {
@@ -1567,7 +1672,7 @@ function __installDevastMod(B) {
     };
     if (e.button === 0) {
       Aimbot.mouseDown = true;
-
+      connectionEvent('manual-fire', {held: true});
     }
     if (e.button === 2) interceptedRightClick = false;
     if (e.button === 2 && openUnderMouse(e)) {
@@ -1580,11 +1685,16 @@ function __installDevastMod(B) {
     if (e.button === 2 && interceptedRightClick) {
       interceptedRightClick = false; e.preventDefault(); e.stopImmediatePropagation();
     }
-    if (e.button === 0) Aimbot.mouseDown = false;
+    if (e.button === 0) {
+      Aimbot.mouseDown = false;
+      connectionEvent('manual-fire', {held: false});
+    }
   }, true);
   listen(window, 'blur', () => {
+    capturedModKeys.clear();
     interceptedRightClick = false;
     Aimbot.mouseDown = false;
+    connectionEvent('blur');
   });
   const canvas = document.getElementById('can');
   if (canvas) {
@@ -1738,6 +1848,7 @@ function __installDevastMod(B) {
     const connection = menu.addFolder('Connection');
     const connectionStatus = connection.add(reconnect, 'status').name('Status').listen();
     connectionStatus.domElement.querySelector('input').readOnly = true;
+    connection.add({SaveDiagnostics: saveDiagnostics}, 'SaveDiagnostics').name('Save diagnostics');
     const config = menu.addFolder('Config');
     config.add({
       Save: persist
@@ -1766,8 +1877,11 @@ function __installDevastMod(B) {
     aim: Aimbot,
     loot: LootData,
     diagnostics,
+    snapshotDiagnostics,
+    saveDiagnostics,
     chat: chatState,
     reconnect,
+    onServerDeath,
     step,
     setSetting,
     openUnderMouse,

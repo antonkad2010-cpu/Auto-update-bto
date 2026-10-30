@@ -13,6 +13,17 @@ import time
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / 'patches' / 'responsive.json'
+CLIENT_CHECK_POLICY = ROOT / 'patches' / 'client-check-policy.json'
+REVIEWED_CHECKS = ROOT / 'patches' / 'client-check-test.json'
+
+
+def reviewed_check_spec():
+    policy = json.loads(CLIENT_CHECK_POLICY.read_text(encoding='utf-8'))
+    if type(policy.get('enabled')) is not bool:
+        raise ValueError('Client-check policy requires a boolean enabled value')
+    if not policy['enabled']:
+        return None
+    return json.loads(REVIEWED_CHECKS.read_text(encoding='utf-8'))
 
 
 def atomic_json(path, data):
@@ -32,12 +43,18 @@ def run(command):
 def check(output):
     output.mkdir(parents=True, exist_ok=True)
     expected = json.loads(MANIFEST.read_text(encoding='utf-8'))['base_sha256']
+    reviewed = reviewed_check_spec()
     with tempfile.TemporaryDirectory(prefix='devast-watch-') as work:
         work = Path(work)
         run([sys.executable, 'tools/fetch_current.py', '--out', str(work)])
         source = json.loads((work / 'manifest.json').read_text(encoding='utf-8'))
         info = {'source_url': source['source_url'], 'source_sha256': source['sha256'],
                 'checked_at': int(time.time())}
+        if reviewed and source['sha256'] != reviewed['base_sha256']:
+            atomic_json(output / 'status.json', {
+                **info, 'status': 'new_version_needs_remapping',
+                'message': 'Reviewed client-check changes need review for this upstream version.'})
+            return False
         manifest = MANIFEST
         remapped = source['sha256'] != expected
         if remapped:
@@ -51,18 +68,27 @@ def check(output):
                 return False
         product, report = work / 'game.modded.js', work / 'report.json'
         run([sys.executable, '-m', 'unittest', 'discover', '-s', 'tests', '-p', 'test_*.py'])
-        run(['node', '--test', 'tests/responsive.test.cjs', 'tests/ilm-integration.test.cjs', 'tests/native-labels.test.cjs', 'tests/doors.test.cjs', 'tests/fast-loot.test.cjs', 'tests/road-placement.test.cjs'])
+        run(['node', '--test', 'tests/responsive.test.cjs', 'tests/ilm-integration.test.cjs', 'tests/native-labels.test.cjs', 'tests/doors.test.cjs', 'tests/fast-loot.test.cjs', 'tests/road-placement.test.cjs', 'tests/client-check-variant.test.cjs', 'tests/native-export-probes.test.cjs'])
         run(['node', '--test', 'tests/remap.test.cjs'])
         run([sys.executable, 'tools/apply_patches.py', '--base', str(work / 'game.current.js'),
              '--manifest', str(manifest), '--output', str(product), '--report', str(report)])
+        build_report = json.loads(report.read_text(encoding='utf-8'))
+        if reviewed:
+            variant, variant_report = work / 'reviewed.js', work / 'reviewed-report.json'
+            run(['node', 'tools/client_check_variant.cjs', str(work / 'game.current.js'),
+                 str(product), str(REVIEWED_CHECKS), str(variant), str(variant_report)])
+            product = variant
+            build_report['client_checks'] = json.loads(variant_report.read_text(encoding='utf-8'))
         run(['node', '--check', str(product)])
         data = product.read_bytes()
+        build_report['output_sha256'] = hashlib.sha256(data).hexdigest()
         temporary = output / '.game.modded.js.tmp'
         temporary.write_bytes(data)
         os.replace(temporary, output / 'game.modded.js')
-        atomic_json(output / 'report.json', json.loads(report.read_text(encoding='utf-8')))
+        atomic_json(output / 'report.json', build_report)
         atomic_json(output / 'status.json', {**info, 'status': 'verified_bindings',
                     'automatically_remapped': remapped,
+                    'client_check_variant': reviewed is not None,
                     'output_sha256': hashlib.sha256(data).hexdigest(),
                     'message': 'Static checks passed; live gameplay was not tested.'})
         return True

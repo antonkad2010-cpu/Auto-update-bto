@@ -4,16 +4,16 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const source = fs.readFileSync(require('node:path').join(__dirname, '../mod/responsive.js'), 'utf8');
 function fixture() {
-  let retries=0, refreshes=0;
+  let retries=0, refreshes=0;const listeners={};
   const row=['osakasurvival1','Osaka',1,1,'osaka',0,'survival'];
   const network={state:2,ԁᴄࡃ:row,ոߒ४:[row],ᴎᚂρ(){},ѕ᠋༢(){},ρ٨٨(){},ⲅ︊ᄃ(url,cb){assert.equal(url,"https://devast.io/list");refreshes++;cb()}};
-  const window={addEventListener(){},removeEventListener(){},requestAnimationFrame(){return 1},setInterval(){return 1},clearInterval(){},cancelAnimationFrame(){}};
+  const window={addEventListener(name,fn){listeners[name]=fn},removeEventListener(){},requestAnimationFrame(){return 1},setInterval(){return 1},clearInterval(){},cancelAnimationFrame(){}};
   const document={readyState:'loading',getElementById(){return null}};
   const localStorage={getItem(){return null},setItem(){},removeItem(){throw Error('unexpected deletion')}};
   const B={network,world:{},reconnect(){retries++}};
   const context=vm.createContext({window,document,localStorage,performance:{now:()=>0},console,B});
   const api=vm.runInContext(source+'\n__installDevastMod(B)',context);
-  return {api,network,get retries(){return retries},get refreshes(){return refreshes}};
+  return {api,network,B,listeners,get retries(){return retries},get refreshes(){return refreshes}};
 }
 test('reconnect refreshes the selected server and invokes the game login without clearing storage',()=>{
   const f=fixture(); f.api.step(0); f.network.state=64; f.api.step(100); f.api.step(1101);
@@ -38,6 +38,63 @@ test('camera snapshot keeps the render scale after the game restores its scale',
   vm.runInContext('__responsiveView={x:50,y:80,scale:2,ctx:а०̅};ρ̟０=1;',context);
   const view=vm.runInContext('window.__devastMod.view()',context);
   assert.equal(view.x,50); assert.equal(view.y,80); assert.equal(view.scale,2);
+});
+
+test('diagnostics reads the native integrity flag without changing it or starting connections',()=>{
+  const f=fixture(); let flag=0, reads=0;
+  f.B.nativeIntegrity=()=>{reads++;return flag};
+  assert.equal(f.api.snapshotDiagnostics().nativeIntegrityFlag,0);
+  flag=1;
+  assert.equal(f.api.snapshotDiagnostics().nativeIntegrityFlag,1);
+  assert.equal(flag,1);assert.ok(reads>=2);assert.equal(f.retries,0);assert.equal(f.refreshes,0);
+  f.B.nativeIntegrity=()=>{throw Error('unavailable')};
+  assert.equal(f.api.snapshotDiagnostics().nativeIntegrityFlag,null);
+});
+
+test('diagnostics distinguishes absent, present and unavailable native export without exporting its contents',()=>{
+  const f=fixture();let present=false;
+  assert.equal(f.api.snapshotDiagnostics().nativeExportPresent,null);
+  f.B.nativeExportPresent=()=>present;
+  assert.equal(f.api.snapshotDiagnostics().nativeExportPresent,false);
+  present=true;f.B.network.exported={secret:'PRIVATE_EXPORT_CONTENT'};
+  const report=f.api.snapshotDiagnostics();
+  assert.equal(report.nativeExportPresent,true);
+  assert.ok(report.events.some(e=>e.event==='state'&&e.nativeExportPresent===true));
+  assert.ok(!JSON.stringify(report).includes('PRIVATE_EXPORT_CONTENT'));
+  f.api.onServerDeath();
+  assert.equal(f.api.snapshotDiagnostics().events.findLast(e=>e.event==='native-death').nativeExportPresent,true);
+  f.B.nativeExportPresent=()=>{throw Error('not available')};
+  assert.equal(f.api.snapshotDiagnostics().nativeExportPresent,null);
+  assert.equal(f.retries,0);assert.equal(f.refreshes,0);
+});
+
+test('diagnostic reports retain death context and bound memory while excluding credentials and chat',()=>{
+  const f=fixture();
+  f.B.network.token='PRIVATE_NETWORK_TOKEN';f.api.settings.Token='PRIVATE_TOKEN_INPUT';
+  f.api.settings.SpamChatText='PRIVATE_CHAT';f.api.diagnostics.errors.push('PRIVATE_ERROR');
+  for(let i=0;i<1200;i++)f.api.setSetting('AimBotEnabled',i%2===0);
+  f.api.setSetting('AimBotEnabled',true);f.api.setSetting('autoFire',true);
+  f.api.onServerDeath();
+  const report=f.api.snapshotDiagnostics(),text=JSON.stringify(report);
+  assert.ok(report.events.length<=256);assert.ok(report.events.some(x=>x.event==='native-death'&&x.aimEnabled&&x.autoFire));
+  assert.equal(report.reconnectEndedByServer,true);
+  for(const secret of ['PRIVATE_NETWORK_TOKEN','PRIVATE_TOKEN_INPUT','PRIVATE_CHAT','PRIVATE_ERROR'])assert.ok(!text.includes(secret));
+  report.events[0].event='changed';assert.notEqual(f.api.snapshotDiagnostics().events[0].event,'changed');
+});
+
+test('production adapter exposes a live read-only integrity status',()=>{
+  const adapter=fs.readFileSync(require('node:path').join(__dirname,'../mod/responsive-adapter.js'),'utf8');
+  const context=vm.createContext({window:{},document:{},__installDevastMod:b=>b});
+  vm.runInContext('var а०̅={},εᚇ๓={},еܞ︌={},о̃༩={},ρ̃५={},ι‌̵={},ᴇ️̅={},ιᄅᴄ={},ᴘᚉ٦={},ᴉ२ߋ={},ρⲅ̶=0,ιܒ̷=1,ⲟ２ܖ=2,Ꮷρ༧=0;',context);
+  vm.runInContext(adapter,context);
+  assert.equal(vm.runInContext('window.__devastMod.nativeIntegrity()',context),0);
+  vm.runInContext('Ꮷρ༧=1;',context);
+  assert.equal(vm.runInContext('window.__devastMod.nativeIntegrity()',context),1);
+  assert.equal(vm.runInContext('Ꮷρ༧',context),1);
+  assert.equal(vm.runInContext('window.__devastMod.nativeExportPresent()',context),false);
+  vm.runInContext('var р̄９={secret:42};',context);
+  assert.equal(vm.runInContext('window.__devastMod.nativeExportPresent()',context),true);
+  assert.equal(vm.runInContext('р̄９.secret',context),42);
 });
 
 test('ILM target selection, angles and auto fire match extracted original',()=>{
@@ -126,4 +183,66 @@ test('migration keeps every legacy entry if copying to the new namespace fails',
   vm.runInContext(source+'\n__installDevastMod(B)',context);
   assert.equal(data.get('BestModMenuConfig'),' {"distanceCoefficient":420}'.trim());
   assert.equal(data.get('BestModMenuConfig:ilm1'),'1');assert.equal(data.get('BestModMenuConfig:loot'),'{}');
+});
+
+test('native server-death handler preserves removal and XP but disables reconnect after the socket closes',()=>{
+ const f=fixture(),path=require('node:path'),native=require('./fixtures/native-server-death.json');
+ const manifest=JSON.parse(fs.readFileSync(path.join(__dirname,'../patches/responsive.json'),'utf8'));
+ const patch=manifest.patches.find(p=>p.id==='native-server-death-event');
+ assert.equal(native.base_sha256,manifest.base_sha256);assert.equal(patch.anchor,native.source);
+ f.network.state=1;f.api.step(0);f.B.world.ᅠᏧ‍={id:7};
+ const calls=[],entity={ᴘ४１:7,id:0,ոᚄރ:3,type:0};
+ const context=vm.createContext({...native.constants,__responsiveMod:f.api,еܞ︌:f.B.world,о̃༩:{αᏧ̣(){calls.push('native-end');f.network.state=0}},ιܒ̷:0,ι‌̵:{іܛρ(type,pid,uid){assert.deepEqual([type,pid,uid],[0,7,0]);return entity},remove(...args){calls.push(args)}}});
+ vm.runInContext('('+patch.replacement+')',context)(new Uint8Array([5,1,1]));
+ assert.deepEqual(calls,[[7,0,3,0,1],'native-end']);assert.equal(f.B.world.ᅠᏧ‍.а́６,257);
+ assert.equal(f.api.reconnect.armed,false);assert.equal(f.api.reconnect.endedByServer,true);
+ f.api.step(10);f.network.state=64;for(const t of [100,1101,5000,20000,60000])f.api.step(t);
+ assert.equal(f.refreshes,0);assert.equal(f.retries,0);assert.match(f.api.reconnect.status,/use Play/);
+});
+
+test('manual Play after server death restores ordinary connection-error recovery',()=>{
+ const f=fixture();f.network.state=1;f.api.step(0);f.api.onServerDeath();f.network.state=64;f.api.step(100);
+ assert.equal(f.retries,0);assert.equal(f.api.reconnect.endedByServer,true);
+ f.network.state=2;f.api.step(200);assert.equal(f.api.reconnect.armed,true);assert.equal(f.api.reconnect.endedByServer,false);
+ f.network.state=64;f.api.step(300);f.api.step(1301);assert.equal(f.retries,1);
+});
+
+test('server death cancels an in-flight server-list callback and pending aim commands',()=>{
+ const f=fixture();let callback;f.network.ⲅ︊ᄃ=(url,cb)=>{callback=cb};
+ f.api.step(0);f.network.state=64;f.api.step(100);f.api.step(1101);assert.equal(f.api.reconnect.pending,true);
+ f.api.targets.players[1]={active:true};f.api.aim.targetPlayer=f.api.targets.players[1];f.api.aim.mouseDown=true;
+ f.api.onServerDeath();callback();assert.equal(f.api.reconnect.pending,false);assert.equal(f.retries,0);assert.equal(f.api.aim.targetPlayer,null);assert.equal(f.api.aim.mouseDown,false);
+ f.api.step(50000);assert.equal(f.retries,0);
+});
+
+function keyEvent(code,repeat=false,tagName='CANVAS'){
+ return {code,repeat,target:{tagName},preventDefault(){this.prevented=true},stopImmediatePropagation(){this.stopped=true}};
+}
+test('aim Space and its repeats do not fall through to native interaction',()=>{
+ const f=fixture();let nativeInteractions=0;
+ function dispatch(e){f.listeners.keydown(e);if(!e.stopped&&e.code==='Space')nativeInteractions++;}
+ const first=keyEvent('Space');dispatch(first);assert.equal(f.api.settings.AimBotEnabled,true);assert.equal(first.prevented,true);assert.equal(first.stopped,true);
+ for(let i=0;i<20;i++)dispatch(keyEvent('Space',true));
+ assert.equal(f.api.settings.AimBotEnabled,true);assert.equal(nativeInteractions,0);
+ dispatch(keyEvent('Space'));assert.equal(f.api.settings.AimBotEnabled,false);assert.equal(nativeInteractions,0);
+});
+test('rebinding restores native Space while the new mod key stays exclusive',()=>{
+ const f=fixture();f.api.setSetting('AimbotKey','KeyZ');
+ const space=keyEvent('Space');f.listeners.keydown(space);assert.equal(space.stopped,undefined);assert.equal(f.api.settings.AimBotEnabled,false);
+ const z=keyEvent('KeyZ');f.listeners.keydown(z);assert.equal(z.stopped,true);assert.equal(f.api.settings.AimBotEnabled,true);
+ const e=keyEvent('KeyE');f.listeners.keydown(e);assert.equal(e.stopped,undefined);
+});
+test('typing, native button activation and editing never toggle the aim binding',()=>{
+ const f=fixture();for(const tag of ['INPUT','TEXTAREA','SELECT','BUTTON'])for(const repeat of [false,true]){
+  const e=keyEvent('Space',repeat,tag);f.listeners.keydown(e);assert.equal(e.stopped,undefined);assert.equal(e.prevented,undefined);assert.equal(f.api.settings.AimBotEnabled,false);
+ }
+ const e=keyEvent('Space');e.target.isContentEditable=true;f.listeners.keydown(e);assert.equal(e.stopped,undefined);assert.equal(f.api.settings.AimBotEnabled,false);
+});
+
+test('only keyup events belonging to consumed mod presses are intercepted, with blur cleanup',()=>{
+ const f=fixture();f.listeners.keydown(keyEvent('Space'));
+ const release=keyEvent('Space');f.listeners.keyup(release);assert.equal(release.stopped,true);
+ const unrelated=keyEvent('Space');f.listeners.keyup(unrelated);assert.equal(unrelated.stopped,undefined);
+ f.listeners.keydown(keyEvent('Space',false,'INPUT'));const typedRelease=keyEvent('Space',false,'INPUT');f.listeners.keyup(typedRelease);assert.equal(typedRelease.stopped,undefined);
+ f.listeners.keydown(keyEvent('Space'));f.listeners.blur();const afterBlur=keyEvent('Space');f.listeners.keyup(afterBlur);assert.equal(afterBlur.stopped,undefined);
 });
