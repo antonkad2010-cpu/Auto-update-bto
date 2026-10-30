@@ -227,19 +227,20 @@ function pacingFixture(){
 }
 function lineAngle(f){const l=f.api.targets.lines[0];return (Math.round(Math.atan2(l.y2-l.y1,l.x2-l.x1)*180/Math.PI)+360)%360;}
 
-test('idle aim respects the native 150ms boundary and sends the latest prediction at one deadline',()=>{
+test('direct aim sends each changed prediction immediately on the ILM 50ms tick',()=>{
  const f=pacingFixture();f.refresh();assert.deepEqual(f.sent,[[6,0]]);
- f.advance(50);f.packet([{pid:2,x:800,y:530}]);f.refresh();assert.equal(f.pending,1);assert.equal(f.sent.length,1);
- f.advance(50);f.packet([{pid:2,x:800,y:580}]);f.refresh();assert.equal(f.pending,1);
- f.advance(50);assert.equal(f.sent.length,1);f.advance(1);
- assert.equal(f.sent.length,2);assert.equal(f.sent[1][1],lineAngle(f));assert.equal(f.pending,0);
+ f.advance(50);f.packet([{pid:2,x:800,y:530}]);f.refresh();assert.equal(f.pending,0);assert.equal(f.sent.length,2);
+ assert.equal(f.sent.at(-1)[1],lineAngle(f));
+ f.advance(50);f.packet([{pid:2,x:800,y:580}]);f.refresh();assert.equal(f.pending,0);
+ assert.equal(f.sent.length,3);assert.equal(f.sent.at(-1)[1],lineAngle(f));
+ f.advance(200);assert.equal(f.sent.length,3);
 });
 
-test('held manual fire uses the native 60ms boundary without synthetic fire or release',()=>{
+test('held manual input receives direct aim updates without synthetic fire or release',()=>{
  const f=pacingFixture();f.api.setSetting('autoFire',true);f.api.aim.mouseDown=true;f.refresh();
  f.advance(50);f.packet([{pid:2,x:820,y:530}]);f.packet([{pid:2,x:800,y:520}]);f.refresh();
- assert.equal(f.api.aim.wannaFire(),true);assert.equal(f.pending,1);
- f.advance(10);assert.equal(f.sent.length,1);f.advance(1);
+ assert.equal(f.api.aim.wannaFire(),true);assert.equal(f.pending,0);
+ assert.equal(f.sent.length,2);f.advance(11);
  assert.equal(f.sent.length,2);assert.ok(f.sent.every(p=>p[0]===6));assert.equal(f.sent.at(-1)[1],lineAngle(f));
  assert.ok(f.api.diagnostics.manualFireOwnsInput>0);
  f.api.aim.mouseDown=false;f.advance(200);f.refresh();assert.ok(f.sent.every(p=>p[0]===6));
@@ -260,33 +261,34 @@ test('a queued autofire opportunity is discarded when the next update no longer 
  f.packet([{pid:2,x:840,y:500}]);f.advance(100);assert.deepEqual(f.sent,[[6,0],[4],[5]]);
 });
 
-test('target loss, disable, disconnect, death and dispose cancel deferred aim without stale commands',()=>{
+test('direct aim has no deferred packets after target loss, disable, disconnect, death or dispose',()=>{
  for(const action of ['target','disable','disconnect','death','dispose']){
-  const f=pacingFixture();f.refresh();f.advance(50);f.packet([{pid:2,x:800,y:530}]);f.refresh();assert.equal(f.pending,1,action);
+  const f=pacingFixture();f.refresh();f.advance(50);f.packet([{pid:2,x:800,y:530}]);f.refresh();assert.equal(f.pending,0,action);
+  const before=JSON.stringify(f.sent);assert.equal(f.sent.length,2);
   if(action==='target')f.packet([{pid:2,active:false}]);
   if(action==='disable')f.api.setSetting('AimBotEnabled',false);
   if(action==='disconnect'){f.network.state=64;f.api.step(f.now);}
   if(action==='death')f.api.onServerDeath();
   if(action==='dispose')f.api.dispose();
-  assert.equal(f.pending,0,action);f.advance(1000);assert.deepEqual(f.sent,[[6,0]],action);
+  assert.equal(f.pending,0,action);f.advance(1000);assert.equal(JSON.stringify(f.sent),before,action);
  }
 });
 
-test('toggling aim does not reset the outgoing interval budget',()=>{
+test('direct aim reacquires immediately after toggling instead of waiting for an interval',()=>{
  const f=pacingFixture();f.refresh();f.advance(10);
  f.api.setSetting('AimBotEnabled',false);f.api.setSetting('AimBotEnabled',true);f.refresh();
- assert.equal(f.sent.length,1);assert.equal(f.pending,1);f.advance(141);assert.deepEqual(f.sent,[[6,0],[6,0]]);
+ assert.equal(f.sent.length,2);assert.equal(f.pending,0);assert.deepEqual(f.sent,[[6,0],[6,0]]);
 });
 
-test('twenty simulated minutes keep manual aim bounded with no fire releases or unbounded queue',()=>{
+test('twenty simulated minutes of direct aim keep every current angle immediate and queue-free',()=>{
  const f=pacingFixture(),wire=[];f.useNativeSender(s=>wire.push({at:f.now,packet:JSON.parse(s)}));
- f.api.setSetting('autoFire',true);f.api.aim.mouseDown=true;
+ f.api.setSetting('autoFire',false);
  for(let i=0;i<24000;i++){
   f.advance(50);f.packet([{pid:2,x:800+i%7,y:480+i%53}]);f.refresh();
-  assert.ok(f.pending<=1);
+  assert.equal(f.pending,0);assert.equal(wire.at(-1).packet[1],lineAngle(f));
  }
- assert.equal(f.now,1200000);assert.ok(wire.length>1000);assert.ok(wire.length<=Math.ceil(1200000/61)+1);
- assert.ok(wire.every(x=>x.packet[0]===6));assert.ok(wire.slice(1).every((x,i)=>x.at-wire[i].at>60));
+ assert.equal(f.now,1200000);assert.ok(wire.length>1000);assert.equal(wire.length+f.api.diagnostics.deduplicatedAngles,24000);
+ assert.ok(wire.every(x=>x.packet[0]===6));assert.ok(wire.slice(1).every((x,i)=>x.at-wire[i].at>=50));
  assert.equal(f.api.snapshotDiagnostics().events.length,256);assert.equal(f.api.diagnostics.errors.length,0);
 });
 

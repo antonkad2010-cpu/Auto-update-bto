@@ -43,7 +43,7 @@ test('aim toggles produce no separate encoded message, with and without a known 
  const c=await context(true);
  vm.runInContext('api.setSetting("AimBotEnabled",true);api.aim.refresh();api.setSetting("AimBotEnabled",false);api.aim.refresh();',c);
  assert.equal(c.captured.length,0);assert.equal(c.api.settings.autoFire,false);assert.equal(c.Ꮷρ༧,1);
- assert.equal(c.api.snapshotDiagnostics().aimTransport,'native-intervals-v1');
+ assert.equal(c.api.snapshotDiagnostics().aimTransport,'ilm-direct-v1');
  assert.equal(typeof c.api.snapshotDiagnostics().deferredAimUpdates,'number');
  vm.runInContext('api.trackPacket(0,2,0,5300,5000,true);api.setSetting("AimBotEnabled",true)',c);
  assert.equal(c.captured.length,0);

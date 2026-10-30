@@ -56,9 +56,9 @@ python3 tools/watch_game.py --interval 120
 
 ## Проверка загруженного наведения
 
-Текущий выпуск использует native-intervals-v1. В отчёте Connection → Save
+Текущий выпуск использует ilm-direct-v1. В отчёте Connection → Save
 diagnostics присутствует поле aimTransport с этим значением. Импорт
 `dist/Devast-aim-pacing.ResourceOverride.json` загружает текущий main,
 добавляя параметр URL для новой загрузки. Старое правило нужно отключить,
 чтобы не запускалась сохранённая ранее inline-сборка. Детали проверки —
-в AIM-PACING-RELEASE.md, резервная версия и откат — в ROLLBACK.md.
+в AIM-DIRECT-RESTORE.md, резервная версия и откат — в ROLLBACK.md.

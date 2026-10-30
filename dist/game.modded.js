@@ -913,7 +913,7 @@ function __installDevastMod(B) {
     return {
       schemaVersion: 1,
       scope: 'Local mod commands and input; native packets are not captured',
-      aimTransport: 'native-intervals-v1',
+      aimTransport: 'ilm-direct-v1',
       networkState: B.network.state,
       nativeIntegrityFlag: nativeIntegrityFlag(),
       nativeExportPresent: nativeExportPresence(),
@@ -971,7 +971,7 @@ function __installDevastMod(B) {
     return B.network.state === 1 && B.world.ᅠᏧ‍ && B.world.ᅠᏧ‍.id > 0;
   }
   let lastSentAngle = null;
-  let lastAimSentAt = -Infinity, lastAutoFireSentAt = -Infinity;
+  let lastAutoFireSentAt = -Infinity;
   let aimRetry = null, aimRetryAt = Infinity;
   function aimSendInterval(firing) {
     const interval = B.aimSendInterval ? B.aimSendInterval(firing) : firing ? 60 : 150;
@@ -1013,19 +1013,6 @@ function __installDevastMod(B) {
     if (packet[0] === 6) lastSentAngle = packet[1];
     diagnostics.commands++;
     connectionEvent('mod-command', {opcode: packet[0], ...(packet[0] === 6 ? {angle: packet[1]} : {})});
-    return true;
-  }
-  function sendAimAngle(angle, firing, now) {
-    const normalized = (Math.round(angle) % 360 + 360) % 360;
-    const changed = normalized !== lastSentAngle;
-    const remaining = aimSendInterval(firing) - (now - lastAimSentAt);
-    if (changed && remaining >= 0) {
-      diagnostics.deferredAimUpdates++;
-      retryAimAfter(remaining, now);
-      return false;
-    }
-    if (!__send([6, normalized])) return false;
-    if (changed) lastAimSentAt = now;
     return true;
   }
   function persist() {
@@ -1121,7 +1108,8 @@ function __installDevastMod(B) {
     const target = this.targetPlayer;
     const wantsFire = MOD.autoFire && this.wannaFire();
     const now = performance.now();
-    const angleReady = sendAimAngle(angle, this.mouseDown || wantsFire, now);
+    // Keep the original ILM angle path synchronous with its prediction.
+    const angleReady = __send([6, angle]);
     if (wantsFire && lastAutoFireUpdates.get(target) !== target.revision) {
       // A synthetic release must never interrupt the user's held fire button.
       if (this.mouseDown) {
