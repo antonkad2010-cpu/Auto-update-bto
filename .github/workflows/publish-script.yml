@@ -41,9 +41,10 @@ jobs:
           state=$(python -c "import json; print(json.load(open('build/watch/status.json'))['status'])")
           case "$state" in
             verified_bindings) cp build/watch/game.modded.js public-script/game.modded.js ;;
-            new_version_needs_remapping) printf '%s\n' 'Game version changed; a compatible script is not yet available.' > public-script/index.html ;;
+            new_version_needs_remapping) cp dist/game.modded.js public-script/game.modded.js; printf '%s\n' 'Game version changed; see update-status.json. The last compatible script is retained with a version guard.' > public-script/index.html ;;
             *) echo 'Version check failed; publication skipped.'; exit 1 ;;
           esac
+          cp build/watch/status.json public-script/update-status.json
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

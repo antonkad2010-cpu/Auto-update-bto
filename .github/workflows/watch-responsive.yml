@@ -38,16 +38,11 @@ jobs:
         if: always()
         shell: bash
         run: |
-          if [ ! -f build/watch/status.json ]; then exit 0; fi
-          state=$(python -c "import json; print(json.load(open('build/watch/status.json'))['status'])")
-          case "$state" in
-            verified_bindings) mkdir -p dist; cp build/watch/game.modded.js dist/game.modded.js ;;
-            new_version_needs_remapping) rm -f dist/game.modded.js ;;
-            *) exit 0 ;;
-          esac
+          python tools/publish_watch.py
+          cat build/watch/status.json >> "$GITHUB_STEP_SUMMARY"
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A -- dist/game.modded.js
+          git add -- dist/game.modded.js dist/update-status.json
           if ! git diff --cached --quiet; then
             git commit -m "Update compatible game bundle"
             git push origin HEAD:main

@@ -1,0 +1,13 @@
+{
+  "source_url": "https://devast.io/js/GqIvLJdVfXmKlyX.js",
+  "source_sha256": "b2752241a0a1491b5bd48146c7c3c4937f490928df5cab058ba80d32a413acc1",
+  "status": "verified_bindings",
+  "automatically_remapped": false,
+  "client_check_variant": true,
+  "output_sha256": "4638c9749cab72a2e0eccffc0f628d56f14eb54388554c2faa1980f4b3faf7b8",
+  "message": "Static checks passed; live gameplay was not tested.",
+  "publication": "compatible_build",
+  "published_source_sha256": "b2752241a0a1491b5bd48146c7c3c4937f490928df5cab058ba80d32a413acc1",
+  "published_output_sha256": "4638c9749cab72a2e0eccffc0f628d56f14eb54388554c2faa1980f4b3faf7b8",
+  "actions_url": "https://github.com/antonkad2010-cpu/Auto-update-bto/actions/workflows/watch-responsive.yml"
+}

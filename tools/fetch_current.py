@@ -26,7 +26,9 @@ def get(url, limit=LIMIT):
     parsed = urllib.parse.urlparse(url)
     if parsed.scheme != "https" or not (parsed.hostname == "devast.io" or parsed.hostname.endswith(".devast.io")):
         raise ValueError("Only devast.io HTTPS resources are accepted")
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0",
+                                               "Cache-Control": "no-cache",
+                                               "Pragma": "no-cache"})
     with urllib.request.urlopen(req, timeout=25) as res:
         if int(res.headers.get("Content-Length", "0")) > limit:
             raise ValueError("Exceeds size limit")

@@ -12,9 +12,10 @@ import tempfile
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
-MANIFEST = ROOT / 'patches' / 'responsive.json'
+MANIFEST = ROOT / 'patches' / 'current.json'
+BASELINE = ROOT / 'baselines' / 'active.js.gz'
 CLIENT_CHECK_POLICY = ROOT / 'patches' / 'client-check-policy.json'
-REVIEWED_CHECKS = ROOT / 'patches' / 'client-check-test.json'
+REVIEWED_CHECKS = ROOT / 'patches' / 'current-client-checks.json'
 
 
 def reviewed_check_spec():
@@ -50,33 +51,39 @@ def check(output):
         source = json.loads((work / 'manifest.json').read_text(encoding='utf-8'))
         info = {'source_url': source['source_url'], 'source_sha256': source['sha256'],
                 'checked_at': int(time.time())}
-        if reviewed and source['sha256'] != reviewed['base_sha256']:
-            atomic_json(output / 'status.json', {
-                **info, 'status': 'new_version_needs_remapping',
-                'message': 'Reviewed client-check changes need review for this upstream version.'})
-            return False
         manifest = MANIFEST
+        checks = REVIEWED_CHECKS
         remapped = source['sha256'] != expected
         if remapped:
             manifest = work / 'remapped.json'
             try:
-                run(['node', 'tools/remap.cjs', 'baselines/current.js.gz',
-                     str(work / 'game.current.js'), str(MANIFEST), str(manifest)])
+                command = ['node', 'tools/remap.cjs', str(BASELINE),
+                           str(work / 'game.current.js'), str(MANIFEST), str(manifest)]
+                if reviewed:
+                    checks = work / 'remapped-checks.json'
+                    command.extend([str(REVIEWED_CHECKS), str(checks)])
+                run(command)
+                remapped_spec = json.loads(manifest.read_text(encoding='utf-8'))
+                remapped_spec['source_url'] = source['source_url']
+                atomic_json(manifest, remapped_spec)
             except RuntimeError as error:
                 atomic_json(output / 'status.json', {**info, 'status': 'new_version_needs_remapping',
                             'message': str(error)})
                 return False
+        elif reviewed and source['sha256'] != reviewed['base_sha256']:
+            raise ValueError('Active manifest and reviewed checks target different versions')
         product, report = work / 'game.modded.js', work / 'report.json'
         run([sys.executable, '-m', 'unittest', 'discover', '-s', 'tests', '-p', 'test_*.py'])
         run(['node', '--test', 'tests/responsive.test.cjs', 'tests/ilm-integration.test.cjs', 'tests/native-labels.test.cjs', 'tests/doors.test.cjs', 'tests/fast-loot.test.cjs', 'tests/road-placement.test.cjs', 'tests/client-check-variant.test.cjs', 'tests/native-export-probes.test.cjs', 'tests/aim-only-codec.test.cjs'])
         run(['node', '--test', 'tests/remap.test.cjs'])
+        run(['node', '--test', 'tests/current-profile.test.cjs', 'tests/translate-payload.test.cjs'])
         run([sys.executable, 'tools/apply_patches.py', '--base', str(work / 'game.current.js'),
              '--manifest', str(manifest), '--output', str(product), '--report', str(report)])
         build_report = json.loads(report.read_text(encoding='utf-8'))
         if reviewed:
             variant, variant_report = work / 'reviewed.js', work / 'reviewed-report.json'
             run(['node', 'tools/client_check_variant.cjs', str(work / 'game.current.js'),
-                 str(product), str(REVIEWED_CHECKS), str(variant), str(variant_report)])
+                 str(product), str(checks), str(variant), str(variant_report)])
             product = variant
             build_report['client_checks'] = json.loads(variant_report.read_text(encoding='utf-8'))
         run(['node', '--check', str(product)])

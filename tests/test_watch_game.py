@@ -113,6 +113,9 @@ class ReviewedPublicationTests(unittest.TestCase):
 
         def fake_run(command):
             commands.append(command)
+            if 'tools/remap.cjs' in command:
+                self.assertIn(str(watch.REVIEWED_CHECKS), command)
+                raise RuntimeError('Token structure changed; semantic review required')
             self.assertIn('tools/fetch_current.py', command)
             work = Path(command[command.index('--out') + 1])
             (work / 'manifest.json').write_text(json.dumps({
@@ -122,10 +125,36 @@ class ReviewedPublicationTests(unittest.TestCase):
             output = Path(tmp)
             (output / 'game.modded.js').write_text('previous build')
             self.assertFalse(watch.check(output))
-            self.assertEqual(len(commands), 1)
+            self.assertEqual(len(commands), 2)
             self.assertEqual((output / 'game.modded.js').read_text(), 'previous build')
             self.assertEqual(json.loads((output / 'status.json').read_text())['status'],
                              'new_version_needs_remapping')
+
+    def test_proven_rename_remaps_reviewed_checks_before_building(self):
+        commands = []
+
+        def fake_run(command):
+            commands.append(command)
+            if 'tools/fetch_current.py' in command:
+                work = Path(command[command.index('--out') + 1])
+                (work / 'manifest.json').write_text(json.dumps({
+                    'source_url': 'https://devast.io/js/new.js', 'sha256': 'd' * 64}))
+            elif 'tools/remap.cjs' in command:
+                Path(command[5]).write_text('{}')
+                Path(command[7]).write_text('{"base_sha256":"' + 'd' * 64 + '"}')
+            elif 'tools/apply_patches.py' in command:
+                manifest = Path(command[command.index('--manifest') + 1])
+                self.assertEqual(json.loads(manifest.read_text())['source_url'], 'https://devast.io/js/new.js')
+                Path(command[command.index('--output') + 1]).write_text('ordinary build')
+                Path(command[command.index('--report') + 1]).write_text('{}')
+            elif 'tools/client_check_variant.cjs' in command:
+                self.assertEqual(Path(command[4]).name, 'remapped-checks.json')
+                Path(command[-2]).write_text('reviewed remapped build')
+                Path(command[-1]).write_text('{}')
+
+        with tempfile.TemporaryDirectory() as tmp, patch.object(watch, 'run', side_effect=fake_run):
+            self.assertTrue(watch.check(Path(tmp)))
+            self.assertEqual((Path(tmp) / 'game.modded.js').read_text(), 'reviewed remapped build')
 
 
 class ClientCheckPolicyTests(unittest.TestCase):

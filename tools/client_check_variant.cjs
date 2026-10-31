@@ -52,7 +52,7 @@ if (require.main === module) {
     if (digest(base) !== spec.base_sha256) throw Error('Unreviewed upstream version');
     removeReviewedChecks(base, spec);
     const result = removeReviewedChecks(input, spec);
-    const marker = 'nativeIntegrity:()=>Ꮷρ༧,';
+    const marker = 'nativeIntegrity:()=>' + (spec.integrity_name || 'Ꮷρ༧') + ',';
     if (result.output.split(marker).length !== 2) throw Error('Diagnostic adapter is missing or ambiguous');
     result.output = result.output.replace(marker, marker + '\n  clientChecksRemoved:true,');
     const output = '// Reviewed variant: three client checks removed; server disconnect cause remains unverified.\n' + result.output;

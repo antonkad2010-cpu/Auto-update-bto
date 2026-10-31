@@ -50,6 +50,18 @@ class PatcherTests(unittest.TestCase):
             with self.assertRaisesRegex(SystemExit, 'relative paths'):
                 patcher.load_manifest(path / 'manifest.json')
 
+    def test_remapped_inline_payload_keeps_actual_build_identity(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / 'remapped.json'
+            path.write_text('{"base_sha256":"abc","source_url":"https://devast.io/js/new.js",'
+                            '"patches":[{"id":"install-responsive-runtime",'
+                            '"replacement":"install();"}]}')
+            loaded = patcher.load_manifest(path)
+            payload = loaded['patches'][0]['replacement']
+            self.assertIn('"source_sha256": "abc"', payload)
+            self.assertIn('https://devast.io/js/new.js', payload)
+            self.assertTrue(payload.endswith('install();'))
+
 
 if __name__ == '__main__':
     unittest.main()

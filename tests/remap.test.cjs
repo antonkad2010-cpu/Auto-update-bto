@@ -1,6 +1,7 @@
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const {equivalence,remap,rewrite}=require('../tools/remap.cjs');
+const {remapChecks}=require('../tools/remap.cjs');
 const crypto=require('node:crypto');
 const hash=s=>crypto.createHash('sha256').update(s).digest('hex');
 test('consistent Unicode identifier renaming and formatting are accepted',()=>{
@@ -16,4 +17,13 @@ test('semantic changes and ambiguous renames are refused',()=>{
 });
 test('quoted runtime bindings are translated without changing arbitrary strings',()=>{
   assert.equal(rewrite('B.α;B["α"];"label α"',new Map([['α','β']])), 'B.β;B["β"];"label α"');
+});
+test('exact reviewed nodes and the diagnostic binding follow a proven rename',()=>{
+  const before='var α=function(){return β;};var β=0;';
+  const after='var γ = function () { return δ; };var δ=0;';
+  const spec={base_sha256:hash(before),integrity_name:'β',checks:[{id:'integrity',kind:'variable-initializer',name:'α',sha256:hash('function(){return β;}')}]};
+  const result=remapChecks(before,after,spec);
+  assert.equal(result.base_sha256,hash(after));assert.equal(result.integrity_name,'δ');
+  assert.equal(result.checks[0].name,'γ');assert.equal(result.checks[0].sha256,hash('function () { return δ; }'));
+  assert.throws(()=>remapChecks(before,after.replace('δ=0','δ=1'),spec),/changed/);
 });

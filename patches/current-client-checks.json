@@ -1,0 +1,30 @@
+{
+  "base_sha256": "b2752241a0a1491b5bd48146c7c3c4937f490928df5cab058ba80d32a413acc1",
+  "integrity_name": "ㅤ５ᚇ",
+  "checks": [
+    {
+      "id": "browser-api-integrity",
+      "kind": "variable-initializer",
+      "name": "ᴄс٧",
+      "sha256": "be6a4ca5838b4ac2a614f63b3dee6b70de371c513468e266d64a90d0ac3705bb",
+      "characters": 654127
+    },
+    {
+      "id": "known-menu-dom",
+      "kind": "encoded-block",
+      "name": "ᅟ̇ⲥ",
+      "sha256": "5e5289c2348533e72e08b707ce13aa5859bd54ea3cd2b6078c6d16a4e2203d02",
+      "decoded_sha256": "53b4179c9413a30f2817bf895d137a061466d6fa3305d7e28b46ec3a4db9d6a2",
+      "characters": 192415,
+      "decodedCharacters": 33134
+    },
+    {
+      "id": "script-filename-check",
+      "kind": "encoded-block",
+      "sha256": "5f3a475eddb11f42cf80de85001759cd3e38cc04a5dae681f3bca6340c6e124d",
+      "decoded_sha256": "6805315c50fd927d59f1fe33b34d553264019b7fa258e9c3e87ee397a78af2a4",
+      "characters": 5120,
+      "decodedCharacters": 146
+    }
+  ]
+}

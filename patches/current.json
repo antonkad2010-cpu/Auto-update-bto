@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "base_sha256": "b2752241a0a1491b5bd48146c7c3c4937f490928df5cab058ba80d32a413acc1",
+  "source_url": "https://devast.io/js/GqIvLJdVfXmKlyX.js",
+  "payload_bindings": "current-bindings.json",
+  "canonical_manifest": "responsive.json",
+  "patches": [
+    {
+      "id": "native-server-death-event",
+      "literal": true,
+      "anchor": "function рܙ๕(ո๔ࡇ) { var ԁ９ߎ =ᴘոᚄ.ᴑ︇̆(р̊ࠄ,ᴘ̏٤.і३α[Ꮷ٦ᚆ],ⲟᴘ̢);  ( null!==ԁ９ߎ) &&(ᴘոᚄ[ᴏܕ４] ( ԁ９ߎ.ρ͏१ ,ԁ９ߎ [ с̏ࠃ],ԁ９ߎ.ɑ６๖,ԁ９ߎ[ ⲅᄄ٤] , օ๗ᴌ) );ᴘ̏٤.і३α.ѕɑ̘ = (ո๔ࡇ[01] <<ⲣ͏ᴌ)+ո๔ࡇ[ 2] ; оᴌ︈.о̜о();}",
+      "mode": "replace",
+      "replacement": "function рܙ๕(ո๔ࡇ) {if(__responsiveMod)__responsiveMod.onServerDeath(); var ԁ９ߎ =ᴘոᚄ.ᴑ︇̆(р̊ࠄ,ᴘ̏٤.і३α[Ꮷ٦ᚆ],ⲟᴘ̢);  ( null!==ԁ９ߎ) &&(ᴘոᚄ[ᴏܕ４] ( ԁ９ߎ.ρ͏१ ,ԁ９ߎ [ с̏ࠃ],ԁ９ߎ.ɑ６๖,ԁ９ߎ[ ⲅᄄ٤] , օ๗ᴌ) );ᴘ̏٤.і३α.ѕɑ̘ = (ո๔ࡇ[01] <<ⲣ͏ᴌ)+ո๔ࡇ[ 2] ; оᴌ︈.о̜о();}"
+    },
+    {
+      "id": "native-leaderboard-ids",
+      "literal": true,
+      "anchor": "function ⲅ︉️(і३α,ѕ̡١ ) {return а̵̠.ᴉ̷Ꮷ(і३α.ο३︀ ,\"\\47\\x56\\151\\x67a\\47\\54\\x20\\x73\\x61\\x6E\\x73\\x2D\\x73\\x65\\x72i\\146\", ѕ̡١,0x28, ࡀ७ࠅ , undefined,0X0 ,ࡀܕ༨,undefined,ᴘ̣̌,undefined,undefined , undefined ,undefined,undefined ,α̍༦(і३α) , ⲥ︆︀) ; }",
+      "mode": "replace",
+      "replacement_files": [
+        "../mod/native-leaderboard-label.js"
+      ]
+    },
+    {
+      "id": "native-cached-player-label",
+      "literal": true,
+      "anchor": "function ᴄ９̗ (і३α) {var ɑ‌︆ =а̵̠.ᴉ̷Ꮷ (і३α.ο३︀,\"\\47\\x56\\151\\x67\\x61\\47\\u002c\\x20\\163\\x61\\u006E\\163\\55\\x73\\x65\\x72\\x69\\x66\",\"\\x23\\x46\\x46\\x46\\x46\\x46\\106\",046,400,undefined,І४̸,031,undefined,undefined,undefined,undefined,\"\\43\\60\\x30\\60\\x30\\60\\x30\" , ᴏᄉ๕ ,ᴑ︎१,α̍༦(і३α),ⲥ︆︀ ) ; var ѕ٥Ꮷ=( (\"\" !== і३α.ѕ٥Ꮷ )&&(ᴎܖ９!==ɑ‌︆[а༢３]))?а̵̠.ᴉ̷Ꮷ ( (\"[\"+і३α.ѕ٥Ꮷ)+\"\\x5D\", \"\\47\\x56\\u0069\\147\\141\\x27\\x2c\\x20\\163\\141\\156\\163\\x2D\\x73\\145\\162\\x69\\x66\",І༥︄[ㅤⲣᚄ](і३α.е︍ᴌ),38,0620,undefined, 020,25 , ᴘ̣̌, ᴘᏧ̷,ᴘ̣̌,ɑࡉ༧ , \"\\x23\\60\\60\\60\\60\\60\\60\",ᴑ̷̇ ) :null;var ܐ༥ᚆ=(0X0< і३α.ᴇᚆ๓) ? ᴑ٢༩[ࡀ̈ܓ ]( і३α.ᴇᚆ๓-0x1): null;if ( ( ( ܐ༥ᚆ===null)&&(null ===ѕ٥Ꮷ))||(ɑ‌︆ [ɑᚅࡂ ]===00)){ɑ‌︆.ɑ༠і=00;ɑ‌︆.аᄀ४ = а̡̡; ɑ‌︆.ᴏ٣ܖ= о๒༧;return ɑ‌︆;}var ᴘոᄇ=Math[ᴇߌ̄] (0.92*ɑ‌︆[ᴇߋ४] );var ɑ༠і=(ܐ༥ᚆ!==null)?(ᴘոᄇ+ р๒ߓ) : а̡̡;var аᄀ४= (null !== ѕ٥Ꮷ)?ѕ٥Ꮷ[ᅠ̟ࠃ ] :00 ;var ᴏ٣ܖ =(null!==ܐ༥ᚆ)?Math[аᴘށ](іކе, -ⲅρ̇ ):00;var ᴑޅ︃=document[ⲥܘܚ]( \"\\143\\x61\\x6E\\x76\\x61\\163\");ᴑޅ︃[ᴌܜ२]=(ɑ‌︆[ᴌܜ२] +ɑ༠і)+аᄀ४ ; ᴑޅ︃[ᴇߋ४]=ɑ‌︆[ᴇ͠٤ ]+ᴏ٣ܖ;var օހс= ᴑޅ︃[οߓࠀ](\"\\x32\\x64\") ;if( null!==ܐ༥ᚆ)օހс [ ոߊᄈ](ܐ༥ᚆ , 0x2,ᴏ٣ܖ +ⲅρ̇ ,ᴘոᄇ,ᴘոᄇ) ; (null!==ѕ٥Ꮷ )&&  (օހс [ɑވܛ ] (ѕ٥Ꮷ ,ɑ༠і, ᴏ٣ܖ));օހс[ɑވܛ ]( ɑ‌︆,ɑ༠і+аᄀ४,ᴏ٣ܖ)  ;ᴑޅ︃.αո︃=ᴑޅ︃[ᅠ̟ࠃ] / 0x2;ᴑޅ︃.осࡃ=ᴑޅ︃[ⲥܒ๔]/2; ᴑޅ︃.ɑ༠і=ɑ༠і ;ᴑޅ︃.аᄀ४=аᄀ४;ᴑޅ︃.ᴏ٣ܖ=ᴏ٣ܖ;return ᴑޅ︃;}",
+      "mode": "replace",
+      "replacement_files": [
+        "../mod/native-player-label.js"
+      ]
+    },
+    {
+      "id": "native-cached-player-renderer",
+      "literal": true,
+      "anchor": "function ᴎܕα(ԁ９ߎ){var і३α=ᴘ̏٤.ﾠ᠌ܔ[ԁ９ߎ.ρ͏१ ] ; if(( ((16===(ԁ９ߎ.с४̉&255))  && (ⲥᚈϲ!==ᴘ̏٤.і३α.ࡀ︃５ ))&&(ԁ９ߎ.ρ͏१!==ᴘ̏٤.і३α[ѕ̸༢] ) ) && ( ((і३α.ε͢͠ ===  -01)||(і३α.сࡀ٢ !==ᴘ̏٤.ⲣ︉ߑ[і३α.ε͢͠].ɑ６๖))||(і३α.ε͢͠!==ᴘ̏٤.і३α.ε͢͠ ) ))return;if(і३α.ѕᄇ︊===null)і३α.ѕᄇ︊=ᴄ９̗(і३α);var ɑ๖̌ =і३α.ѕᄇ︊;var рހ̏=0X5A;var ܐ༥ᚆ = ɑ๖̌.ɑ༠і/02 ;var ο३︀ =ɑ๖̌.αո︃-ܐ༥ᚆ;var top=((ᴄᚅ̘ + ԁ９ߎ[а︍ߓ ]) - рހ̏)-(ɑ๖̌.ᴏ٣ܖ/ 02);if ( і३α.ε͢͠=== -1) оߒ̂[ ոߊᄈ ]( ɑ๖̌ ,( ((ρ๗༦ + ԁ９ߎ[і︆ܖ ] )- (ο३︀ / 0X2))-ܐ༥ᚆ )*ㅤ̢४ ,ㅤ̢४*top,ɑ๖̌.αո︃*ㅤ̢४,ɑ๖̌.осࡃ*ㅤ̢४); else if( -ࡀᚂ๒!==і३α.ε͢͠ ) {var ε͢͠ = ᴘ̏٤.ⲣ︉ߑ[і३α.ε͢͠];if(ε͢͠.ɑ６๖===і३α.сࡀ٢) {  ( null ===ε͢͠.і༨٣) && (ε͢͠.і༨٣ =а̵̠.ᴉ̷Ꮷ((\"\\x5B\"+ε͢͠ [ι︂̶]) +\"\\x5d\",\"\\47\\126\\151\\x67\\141\\47\\x2c\\x20\\x73\\x61\\156\\163\\55\\x73\\x65\\162\\x69\\u0066\",\"#\\106\\x46\\x46\\x46\\106\\u0046\",046,0620 , undefined,ρ๘̄,031, ѕ̴̋,ﾠο̍ ,ⲅо︃,Ꮷո̷,\"\\x23\\x30\\x300\\x30\\x30\\x30\" , 0Xc) );var α̶٦=ε͢͠.і༨٣ ;var ѕ٥Ꮷ =ɑ๖̌.аᄀ४/ᴀߑࠃ;var օ４̸=ɑ๖̌.ɑ༠і+ɑ๖̌.аᄀ४ ; var name = ( ɑ๖̌.αո︃-ܐ༥ᚆ)-ѕ٥Ꮷ ;var ԁ７०=(ρ๗༦ +ԁ９ߎ[Іⲅߌ ])-(( (ѕ٥Ꮷ+α̶٦.αո︃)+name)/0X2);оߒ̂[ⲟ᠍ބ](α̶٦,( ( ԁ７०+ѕ٥Ꮷ)-0.5)*ㅤ̢४,((ᴄᚅ̘+ԁ９ߎ[а︍ߓ ] )-рހ̏) * ㅤ̢४ , ㅤ̢४ *α̶٦.αո︃,α̶٦.осࡃ* ㅤ̢४); if((ɑ๖̌[ɑᚅࡂ ] !==ο๗̃)&&(ɑ๖̌[рᄈ̷ ] !==ϲᄃ̖)){оߒ̂[ⲟ᠍ބ ] ( ɑ๖̌,օ４̸,ⲣ०๑,ɑ๖̌[ᴌܜ२]-օ４̸,ɑ๖̌[ᴇ͠٤ ],  ( (ԁ７० + ѕ٥Ꮷ)+α̶٦.αո︃)*ㅤ̢४,top*ㅤ̢४,name*ㅤ̢४,ㅤ̢४*ɑ๖̌.осࡃ);(0!==օ４̸)&& ( оߒ̂[ɑވܛ] (ɑ๖̌ , 0x0, οࡂ༩,օ４̸ , ɑ๖̌ [рᄈ̷] ,(ԁ７०-ܐ༥ᚆ)*ㅤ̢४,top*ㅤ̢४ ,ㅤ̢४* (ܐ༥ᚆ+ѕ٥Ꮷ),ɑ๖̌.осࡃ*ㅤ̢४)); }  }else і३α.ε͢͠ =  -1;  }}",
+      "mode": "replace",
+      "replacement": "function ᴎܕα(ԁ９ߎ){var і३α=ᴘ̏٤.ﾠ᠌ܔ[ԁ９ߎ.ρ͏१ ] ;if(__responsiveMod)__responsiveMod.preparePlayerLabel(і३α,ԁ９ߎ.ρ͏१); if(( ((16===(ԁ９ߎ.с४̉&255))  && (ⲥᚈϲ!==ᴘ̏٤.і३α.ࡀ︃５ ))&&(ԁ９ߎ.ρ͏१!==ᴘ̏٤.і३α[ѕ̸༢] ) ) && ( ((і३α.ε͢͠ ===  -01)||(і३α.сࡀ٢ !==ᴘ̏٤.ⲣ︉ߑ[і३α.ε͢͠].ɑ６๖))||(і३α.ε͢͠!==ᴘ̏٤.і३α.ε͢͠ ) ))return;if(і३α.ѕᄇ︊===null)і३α.ѕᄇ︊=ᴄ９̗(і३α);var ɑ๖̌ =і३α.ѕᄇ︊;var рހ̏=0X5A;var ܐ༥ᚆ = ɑ๖̌.ɑ༠і/02 ;var ο३︀ =ɑ๖̌.αո︃-ܐ༥ᚆ;var top=((ᴄᚅ̘ + ԁ９ߎ[а︍ߓ ]) - рހ̏)-(ɑ๖̌.ᴏ٣ܖ/ 02);if ( і३α.ε͢͠=== -1) оߒ̂[ ոߊᄈ ]( ɑ๖̌ ,( ((ρ๗༦ + ԁ９ߎ[і︆ܖ ] )- (ο३︀ / 0X2))-ܐ༥ᚆ )*ㅤ̢४ ,ㅤ̢४*top,ɑ๖̌.αո︃*ㅤ̢४,ɑ๖̌.осࡃ*ㅤ̢४); else if( -ࡀᚂ๒!==і३α.ε͢͠ ) {var ε͢͠ = ᴘ̏٤.ⲣ︉ߑ[і३α.ε͢͠];if(__responsiveMod)__responsiveMod.prepareClanTag(ε͢͠,ԁ９ߎ.ρ͏१);if(ε͢͠.ɑ６๖===і३α.сࡀ٢) {  ( null ===ε͢͠.і༨٣) && (ε͢͠.і༨٣ =а̵̠.ᴉ̷Ꮷ((\"\\x5B\"+ε͢͠ [ι︂̶]) +\"\\x5d\",\"\\47\\126\\151\\x67\\141\\47\\x2c\\x20\\x73\\x61\\156\\163\\55\\x73\\x65\\162\\x69\\u0066\",(__responsiveMod?__responsiveMod.clanColor(ԁ９ߎ.ρ͏१):\"#\\106\\x46\\x46\\x46\\106\\u0046\"),046,0620 , undefined,ρ๘̄,031, ѕ̴̋,ﾠο̍ ,ⲅо︃,Ꮷո̷,\"\\x23\\x30\\x300\\x30\\x30\\x30\" , 0Xc) );var α̶٦=ε͢͠.і༨٣ ;var ѕ٥Ꮷ =ɑ๖̌.аᄀ४/ᴀߑࠃ;var օ４̸=ɑ๖̌.ɑ༠і+ɑ๖̌.аᄀ४ ; var name = ( ɑ๖̌.αո︃-ܐ༥ᚆ)-ѕ٥Ꮷ ;var ԁ７०=(ρ๗༦ +ԁ９ߎ[Іⲅߌ ])-(( (ѕ٥Ꮷ+α̶٦.αո︃)+name)/0X2);оߒ̂[ⲟ᠍ބ](α̶٦,( ( ԁ７०+ѕ٥Ꮷ)-0.5)*ㅤ̢४,((ᴄᚅ̘+ԁ９ߎ[а︍ߓ ] )-рހ̏) * ㅤ̢४ , ㅤ̢४ *α̶٦.αո︃,α̶٦.осࡃ* ㅤ̢४); if((ɑ๖̌[ɑᚅࡂ ] !==ο๗̃)&&(ɑ๖̌[рᄈ̷ ] !==ϲᄃ̖)){оߒ̂[ⲟ᠍ބ ] ( ɑ๖̌,օ４̸,ⲣ०๑,ɑ๖̌[ᴌܜ२]-օ４̸,ɑ๖̌[ᴇ͠٤ ],  ( (ԁ７० + ѕ٥Ꮷ)+α̶٦.αո︃)*ㅤ̢४,top*ㅤ̢४,name*ㅤ̢४,ㅤ̢४*ɑ๖̌.осࡃ);(0!==օ４̸)&& ( оߒ̂[ɑވܛ] (ɑ๖̌ , 0x0, οࡂ༩,օ４̸ , ɑ๖̌ [рᄈ̷] ,(ԁ７०-ܐ༥ᚆ)*ㅤ̢४,top*ㅤ̢४ ,ㅤ̢४* (ܐ༥ᚆ+ѕ٥Ꮷ),ɑ๖̌.осࡃ*ㅤ̢४)); }  }else і३α.ε͢͠ =  -1;  }}"
+    },
+    {
+      "id": "ilm-preserve-native-angle-state",
+      "literal": true,
+      "anchor": "{const ᴄࠁ̝=\"H331e8R3bRd014812814900914d0ab17eH20Hc7030H3b05f1901cc1440681e1R43121Hc5Hf00ebH78H2c041H371bfHb2HcaHf6HfaR4bH0d0d5185R4618a0daR4201eH481cf0261c0R1418cR64Hd6H1107eHf91b6H0c04f182Hc0H08RceHeb14714f1e8R80H2214dR7b1c20ec19aRa2R42Rd20d2R09Hc71f8Rb0Rc0H02Ra0Hf104eR87H2dH19R1a17aRbeHf3Ra11bfRb9024H46HfeR400bcH39R3318dH9c156R3610eR91HdfH37Rf9113088032Rb8R971e51bdRafRc3H34R76156167Rd61e7Hb6H6bHa61d0R7fH1aH81Hb910dH7dRcfR6e0a2R8aH8301f0dbRcd1b0H12Rb816dRb30d515dH1002b17e10aH480641971c41b4H0eR781b9Hf51f9R3a05418eRb218eR0518bH58R89H57Hf2R38Rb81adR73R37Rbf1861e2R42RdeR46Rb2H54R4d006H47H7aHb61c5118Hf5079Hd5096Ra6R11Hc01c7H2b0abR45He2190R04Hc618dH561b9RbbH6915d1fb0eaHdbR31Rc90ebRb8R20Re1033Hf11f5R63R7eRc310613e1c707aR31137H57RddRf8Hb60d0Hc1189141Hd5Hf013eH040aaH68Ha7187HfeRfd1c0H5e047H3a1e5H79R46H69R26R7a05a18fH870161b41741fc1c51f5R73Ra31bd0acH38H9810612aHf31c70a71b01901ccRbcR7bH9dR43H5d060H10R7a14eR19H301e7103H2fRbcR48H02H220b0Hf9R87RabH05H9c1c3H2016bR19Hc3Ra9R9d06917c144Hf1H21R431451baHcc05bHd810aHc3Rb91bbR64071R1f1bcR5fR1fR43H98169H8cRb213a173H9bH0315f16bHba012110H31H99105Ra316aH701fa1beH40Rd9143R45133Ha2R1f1bc17912cRe7045R870daRe3R35RcaHb3H4b1c8R95R30H63110R7315d094Hc11c6023R660cdR6118fR051bbH12R18R400330e714dR43H21R7202bR8204d05e1cfR61R45R1cH2a1401dd16c096035RbbRbaR0eH681fb0dd13fH37Ra1H5fR30R601bc1040f6H391b90aaHc0RdeR4619eH23R81R30H6b0951840831f11cd19107c17aH98R821afReaR25187R7c103Hc2RdcR44H111e5R43074R72R7aH30R1906e15bHc30661701e81841c0171Hf119dHc5H491be122R46Hf3Rc61e3R1cH161a4100H7a07fHcd111RffRb3H4017aH8fH380271ffH53R94160R400bb1b9H9dH791ceHf41fe1361df102038HffR44R74R04R40H2618d185Hc5155046Rb6Hc002a1b7R75R791b8R8cH73188R47Hf5110Hc10111351ce023R411ebR7519bHd7170Hca188078R8fHf51811bd175Rcf1caH50R71Ra107fRa90d9R481bcRa8199H99R83Ra318eR1aH7c152H3f054Hba15fR70H9a180H22Rb302eR3e15503eR1aH00H20R45040Hc301fH9aH4e1881adHf5H3d12103c03614aHf0H87R751261eb15b0000d1Hc2H3aH16R3b005R0aRb20abH00Rf60beRb91cf18fRf51c0Rb8R441040c6H5d0c0R5e02fH93Hc01c702419b1bbHe21901fcR4416d0260d5145R921e61be15eH13Rd6R4d147H4bRf80ca1c11b1H0d185R46Hf4Rce1b2R1916aH8fRb106aH3bR18H7aR33R770b6H49095101R36HfcR45Hf7133R45H3bHc6R1cR3b1cd118131185R7e0c61ceHecRba1a3068R10Hc30e8H2aHe609719dR73H85Hc506302bR06099Rc2Rd9063Hc7133R20R1f1bcHf113dH051aeReb1daR7aHffRfeR41H5f1bbRb9H9aR80R331181a9R7fR43R0eHb0Hec04104e1e7H031b0H6b1dcHfa181H7eHc1121Hc5H39073R661830ceR01He3Hc7R70133Hb2Hf2Rb0H9d17d0b418e1b6H3cHcbHf3Hb7R61HfeR706H3aR44R60Hb9H39Hd0R7201f142R79R1dR41H5fR45R90029H7a10416902a1c612dH05Hf8R86H280baR1d0bb143R94H9aHc2130R9c04e001R0a14e13e17eRa2R86034R85Ra9H0704dH06144R97Rd4019Hc0H98Rce1861afR75RbdRdd1a7R5c14cR70R07Hf5128071H25R96Hd8102106R86070103Ra1R70Ra0032Rb8Re8Ra01faHb0Hd8R32RcaR35H3b1df137H271bcHae188181H6607eH411da1e2H4cR8e1c71b7Rbd61b8190Hc61281c9R7f141R4303418eRb2R42H38R91H33H0312b13f1d01a0R441e1155H41R22R97Hb0R92H38Rb90a0H6b1fcH330ad032Ra0H6aRa0191Hb00ce0bb1361bbR11Rf2R85Ra1123H7a0f6Ha1087R77H3dR57R861f6R62R7dRc2H7b13fHbaH17Hb2R9006bR931e5R4307419607fR72146H30078Hc3147170HbaR7cHcdR8fR57Hf90adH0c18a0fbR5aHf313a1e30f316c1a4H82Rf8H091b1H6d101p007d=0074p0073p007ep0179p016f=0163p017dp016cp0179p0278p0279p027fp0273=0264=0265p0249p024e=0249p025fp0273p0271p026c=026fp0272p0279p0272p0268P\";let ܐ༩ܘ=00; let ι๓︌=00;let ﾠވᴑ=0;const ոᚆ６= [] ;let ܐԁߋ=\"\";let ᴏ०٢=\"\";let ᴉ८̌ =\"\";const _stack=[0 ] ;let _top = 1;while((ι๓︌===0X0 ) &&( _top !==0x0) ) {_top=_top-0X1 ; if ( ܐ༩ܘ>=ᴄࠁ̝[ѕ٥༠])break;const _op=ᴄࠁ̝[ⲥߒߋ ] (ܐ༩ܘ++) ; if (_op=== \"\\x30\"){const _v= ( ᴄࡇ९[ոࡉ٣](ᴄࠁ̝[ ⲥߒߋ] ( ܐ༩ܘ ) +ᴄࠁ̝[ᅟߊ٨](ܐ༩ܘ+0x1),16 ) ^ ( ոᚆ６[ѕ٥༠]&0377))&0xFf;ܐ༩ܘ +=0X2;ոᚆ６[ϲ༧︉] (_v);ﾠވᴑ=_v;}else if (_op === \"\\110\"){const _raw=ᴄࡇ९[ ⲟܚ٧](ᴄࠁ̝[ⲟаι ] (ܐ༩ܘ, 2),0x10);ܐ༩ܘ+= 0x2;const _v=(_raw ^ 0202 ) &0377;ոᚆ６[ոᚆ６ [ᴑܞρ]] = _v;ﾠވᴑ=_v;}else if(_op===\"\\61\"){const _v=(0X100- ᴄࡇ९[ⲟܚ٧](ᴄࠁ̝ [Ꮷᴇ༡] ( ܐ༩ܘ)+ᴄࠁ̝[ⲥߒߋ](ܐ༩ܘ + 01 ) ,0x10)  ) &0XfF; ܐ༩ܘ+=02 ; ոᚆ６[ᅟ︈︇](_v );ﾠވᴑ= _v;}else if(_op===\"\\x36\"){ոᚆ６[ϲ༧︉] ( ﾠވᴑ) ; }else if(_op===\"\\x3D\") { const _t=ᴄࡇ९[ոࡉ٣] ( ᴄࠁ̝[ⲥߒߋ](ܐ༩ܘ)+ᴄࠁ̝[Ꮷᴇ༡](ܐ༩ܘ+01),0x10);const _v=ᴄࡇ९[ᅠ٩͠](ᴄࠁ̝ [Іⲥ‌ ] (ܐ༩ܘ+0x2)+ᴄࠁ̝ [ ᅟߊ٨]( (ܐ༩ܘ+0X2) +0X1),020);ܐ༩ܘ+=0x4;{const _ti=_t;const _cc=ᴄࡇ९[ι༢︋] [ιεܗ] (_v ) ;if(_ti===00 ) ܐԁߋ+=_cc;else if( _ti=== 01) ᴏ०٢ +=_cc;else ᴉ८̌+=_cc;}} else if(_op === \"\\160\"){const _t=(ᴄࡇ९[ㅤ̞І](ᴄࠁ̝ [Ꮷᴇ༡ ] ( ܐ༩ܘ),0x10)<< 0x4 ) |ᴄࡇ९[ⲟܚ٧]( ᴄࠁ̝ [Іⲥ‌] (ܐ༩ܘ+0x1 ), 16);const _v=((ᴄࡇ९ [ⲟܚ٧](ᴄࠁ̝ [ ᅟߊ٨](ܐ༩ܘ+02)  ,0x10)<<0x4)|ᴄࡇ९[ոࡉ٣](ᴄࠁ̝ [ Ꮷᴇ༡]((ܐ༩ܘ+02)+0X1) , 16))^28; ܐ༩ܘ+=04 ; {const _ti =_t; const _cc=ᴄࡇ९ [ι༢︋] [ ᴎ̵̉](_v ) ;if(_ti ===0)ܐԁߋ+=_cc;else if  ( _ti===0X1) ᴏ०٢+=_cc;else ᴉ८̌+=_cc;}} else if(_op ===\"\\173\"){const _c=ᴄࡇ९[ոࡉ٣ ](ᴄࠁ̝[ⲟаι] (ܐ༩ܘ,0X2 )  ,16); const _v= (ᴄࡇ९ [ ᅠ٩͠](ᴄࠁ̝[ᅟߊ٨] (ܐ༩ܘ+0X2),16)<<4) | ᴄࡇ९[ᅠ٩͠](ᴄࠁ̝[ ⲥߒߋ]( ( ܐ༩ܘ+0x2)+0X1),020) ; ܐ༩ܘ+=04;for (let _r =0;_r < _c;_r++)ոᚆ６[ϲ༧︉](_v ) ;ﾠވᴑ = _v;}else if(_op===\"\\x52\") {const _v = ᴄࡇ९[ ⲟܚ٧](ᴄࠁ̝[ⲟаι ] (ܐ༩ܘ,2 ),0x10 ) ;ܐ༩ܘ+=2;ոᚆ６[ոᚆ６[ᴑܞρ]] =_v;ﾠވᴑ=_v;}else if(_op===\"P\"){ι๓︌=1; }_stack[_top++]= 0;}const ɑࡇࡂ=ոᚆ６ [ ѕ٥༠];{const ⲟ５ᚇ=(ɑࡇࡂ/2)| 0 ; for(let ᴄߊᄄ= 0;ᴄߊᄄ<ⲟ５ᚇ;ᴄߊᄄ++ ) {const ⲅᄇ͡=ոᚆ６[ᴄߊᄄ];ոᚆ６ [ ᴄߊᄄ] =ոᚆ６[(ɑࡇࡂ -01) -ᴄߊᄄ] ;ոᚆ６[(ɑࡇࡂ-1) - ᴄߊᄄ]=ⲅᄇ͡;}  } for(let ᴄߊᄄ=0 ; ᴄߊᄄ<ɑࡇࡂ;ᴄߊᄄ++)ոᚆ６[ᴄߊᄄ]=(ոᚆ６[ᴄߊᄄ ] ^17)&0XFF;{let ᴘ๔४=0x61&0xFf;for(let ᴄߊᄄ=0; ᴄߊᄄ<ɑࡇࡂ;ᴄߊᄄ++ ) {const ᴏ̷९ = ոᚆ６[ᴄߊᄄ]&0377 ;const _r= ( (ᴏ̷९>>>02)|(ᴏ̷९<<(010-0X2)))& 0XFf;ոᚆ６[ᴄߊᄄ]=((_r-ᴘ๔४) +0x100 ) &0xFf;ᴘ๔४=(ᴘ๔४+240)&0377 ; }  } let α̗͡= \"\" ; for ( let ⲥ９︅=00;ⲥ９︅<ɑࡇࡂ ;ⲥ９︅++)α̗͡+=ᴄࡇ९[ᴄⲟ̙][ᴎ̵̉ ]( ոᚆ６[ⲥ９︅]);const ι๘ο = ᴄࡇ९[ ܐԁߋ];const ⲥ༤ܒ =ᴄࡇ९[ᴉ८̌] ; const ㅤᚃߑ=ᴄࡇ९ [ᴏ०٢];eval(ⲥ༤ܒ(ㅤᚃߑ( ι๘ο(α̗͡ ) ) ) ) ; }",
+      "mode": "replace",
+      "replacement": "{function օ︃２( ){ if( ( ᴉ̡̂-ѕܓ́)>εࡀߌ) {var ᴑɑࡂ=(( ( ((ㅤ๘މ[ѕ̋̃]-ⲅᚂߌ ) *0xb4)/Math[ո᠋а])%0x168)+0x168 )%0x168; if (ᴑɑࡂ>ᅠ̡๕ ) {ﾠࠂ̶=ᴉ̡̂ ; ѕܓ́ =ᴉ̡̂; ⲅᚂߌ=ㅤ๘މ[ ѕ̋̃ ] ;ᴑɑࡂ =Math[ᴇߌ̄ ](( ( ((ㅤ๘މ[ᴉᄇ︂]*0xb4 ) /Math[ո᠋а ]) %360)  + 360 ) %0550) ;(!__responsiveMod || !__responsiveMod.settings.AimBotEnabled || !__responsiveMod.aim?.targetPlayer?.active) && ιܕ︅(еϲᄄ.ᴎ︅ހ([06 , ᴑɑࡂ ] ));}}};;function ᴄ९ܐ( ){if ( (ᴉ̡̂ - ѕܓ́)>ᴎᄉࡁ){ var ᴑɑࡂ=( (( ( (ㅤ๘މ [ᴉᄇ︂]-ⲅᚂߌ)* 0Xb4) /Math [ⲥᄇօ] ) %360 )+0x168)%360;if(ᴑɑࡂ > 2 ) { ﾠࠂ̶ =ᴉ̡̂; ѕܓ́=ᴉ̡̂ ;ⲅᚂߌ = ㅤ๘މ[ѕ̋̃ ];ᴑɑࡂ =Math [ ᴇߌ̄]((((( ㅤ๘މ[еϲ̇]*0xB4 ) /Math[ɑ︀ܛ] ) %0550 )+0x168)%360) ; (!__responsiveMod || !__responsiveMod.settings.AimBotEnabled || !__responsiveMod.aim?.targetPlayer?.active) && ιܕ︅(еϲᄄ.ᴎ︅ހ([6, ᴑɑࡂ]));}}}; ;}"
+    },
+    {
+      "id": "ilm-show-real-angle",
+      "literal": true,
+      "anchor": "ᅟ̗༣[ⲥ̡༤] =ㅤ๘މ [ еϲ̇]",
+      "mode": "replace",
+      "replacement": "ᅟ̗༣ [(\"angle\")]=(__responsiveMod&&(__responsiveMod.settings.ShowRealAngles==='always'||(__responsiveMod.settings.ShowRealAngles==='withAim'&&__responsiveMod.settings.AimBotEnabled)))?ᴌߊ༡.ᴎ٨ߍ(ᅟ̗༣.angle,ᅟ̗༣.ᴑ٧ߓ,ɑ︌ᄆ):ㅤ๘މ[(\"angle\")]"
+    },
+    {
+      "id": "ilm-track-entity-removal",
+      "literal": true,
+      "anchor": "if ( 00 === Ꮷ̸̗){ᴘոᚄ[ᴉ̡͡] (ρ͏१,ᴘ५٢,ɑ６๖,ᅟօ̉,с४̉ )  ;continue;}",
+      "mode": "replace",
+      "replacement": "if ( 00 === Ꮷ̸̗){if(__responsiveMod)__responsiveMod.trackPacket(ᅟօ̉,ρ͏१,ɑ６๖,0,0,false);ᴘոᚄ[ᴉ̡͡] (ρ͏१,ᴘ५٢,ɑ６๖,ᅟօ̉,с४̉ )  ;continue;}"
+    },
+    {
+      "id": "ilm-track-entity-update",
+      "literal": true,
+      "anchor": "ᴏބވ(ᅟ̗༣ ,ρ͏१,ɑ６๖, ᴘ५٢,ᅟօ̉,ᴌᴄᴏ[ɑ̴̀ + 04],ᴌᴄᴏ[ɑ̴̀+ոᄆߎ],ᴌᴄᴏ[ɑ̴̀+ ρ̴ކ] ,ᴌᴄᴏ[ɑ̴̀+0x7 ] ,с४̉,ո๔ࡇ [ɑ︀१+ո༡̞],Ꮷ̸̗ ,օܞ͢) ;",
+      "mode": "after",
+      "replacement": "if(__responsiveMod)__responsiveMod.trackPacket(ᅟօ̉,ρ͏१,ɑ６๖,ᴌᴄᴏ[ɑ̴̀+6],ᴌᴄᴏ[ɑ̴̀+7],true);"
+    },
+    {
+      "id": "responsive-zoom",
+      "literal": true,
+      "anchor": "с๖５ [αᚊᄁ]",
+      "mode": "replace",
+      "replacement": "(__responsiveMod?__responsiveMod.zoomOffset(с๖５ [αᚊᄁ]):с๖５ [αᚊᄁ])"
+    },
+    {
+      "id": "responsive-mines",
+      "literal": true,
+      "anchor": "function ᅠ̘ܛ(օࠃܜ, ԁ９ߎ ,ԁ７०,рހ̏ ,ᴑࠀᚄ,ё̏)  {",
+      "mode": "after",
+      "replacement": "if(__responsiveMod&&__responsiveMod.settings.ShowMines){оߒ̂.save();try{оߒ̂.globalAlpha=1;ᴘ̃๗.Ꮷߎ̜(օࠃܜ.hidden[ԁ９ߎ.id%3],ρ๗༦+ԁ９ߎ.x+ԁ７०,ᴄᚅ̘+ԁ９ߎ.y+рހ̏,ܐ๖̇*ᴑࠀᚄ,0,0,ё̏)}finally{оߒ̂.restore()}return;}"
+    },
+    {
+      "id": "responsive-xray-buildings",
+      "literal": true,
+      "anchor": "օࠃܜ.еࠄ७(օࠃܜ,ԁ９ߎ, ԁ７०,рހ̏ ,ᴑࠀᚄ, ё̏)",
+      "mode": "replace",
+      "replacement": "(()=>{const alpha=оߒ̂.globalAlpha;if(__responsiveMod&&__responsiveMod.settings.XrayBuildings)оߒ̂.globalAlpha=__responsiveMod.settings.Xraytransparency;try{return օࠃܜ.еࠄ७(օࠃܜ,ԁ９ߎ, ԁ７०,рހ̏ ,ᴑࠀᚄ, ё̏)}finally{оߒ̂.globalAlpha=alpha}})()"
+    },
+    {
+      "id": "track-render-camera",
+      "literal": true,
+      "anchor": "ᴄᚅ̘= ( ( (α̢١ /ㅤ̢४ ) -і३α[αߐ๐])-ᴘࠅ︁)+ㅤⲣ̠ ;",
+      "mode": "after",
+      "replacement": "\n__responsiveView={x:ρ๗༦,y:ᴄᚅ̘,scale:ㅤ̢४,ctx:оߒ̂};\n"
+    },
+    {
+      "id": "install-responsive-runtime",
+      "literal": true,
+      "anchor": "ᴘոᚄ.ᴑ１༥(600,30000,0x1388);",
+      "mode": "before",
+      "replacement_files": [
+        "../mod/dat-gui.js",
+        "../mod/responsive.js",
+        "../mod/responsive-adapter.js"
+      ],
+      "assert_contains": "window.__devastMod=__responsiveMod;"
+    },
+    {
+      "id": "ilm-fast-loot-native-cycle",
+      "literal": true,
+      "anchor": "for(ᅠᴀ︄=І๗᠌;ᅠᴀ︄< ᾰࠂ;ᅠᴀ︄++ )ԁ٥９(ㅤ३І[ⲥ१ࠀ.ᴎсࡄ[ᅠᴀ︄ ] ] )  ;",
+      "mode": "replace",
+      "replacement": "for(ᅠᴀ︄=0;ᅠᴀ︄<ᾰࠂ;ᅠᴀ︄++){var __ilmLoot=ㅤ३І[ⲥ१ࠀ.ᴎсࡄ[ᅠᴀ︄]];ԁ٥９(__ilmLoot);if(__responsiveMod)__responsiveMod.fastLoot(__ilmLoot);}"
+    },
+    {
+      "id": "ilm-road-placement-collision",
+      "literal": true,
+      "anchor": "function ⲟ͏̗(ԁ９ߎ ){α̃̎[ԁ９ߎ.ᅠᴀ︄][ԁ９ߎ.ᴉ९ܘ].оᄀ̢ = ㅤ๖９;α̃̎[ ԁ９ߎ.ᅠᴀ︄][ ԁ９ߎ.ᴉ९ܘ ] .οࡅᴏ= ԁ９ߎ.ρ͏१;α̃̎[ԁ９ߎ.ᅠᴀ︄] [ԁ９ߎ.ᴉ९ܘ] .ԁ̶̀=ⲥ９̎;var ᴑࠀᚄ=(ԁ９ߎ.с४̉>> 05) & і๕ܝ;var օࠃܜ=оܘᚊ[ԁ９ߎ.с४̉>>ɑⲟᴌ];var ё̏=ᴉеᄅ;α̃̎[ ԁ９ߎ.ᅠᴀ︄][ԁ９ߎ.ᴉ९ܘ].ԁ̶̀=օࠃܜ[аո̙] .ԁ̶̀;",
+      "mode": "replace",
+      "replacement": "function ⲟ͏̗(ԁ９ߎ ){var __ilmRoad=!!(__responsiveMod&&__responsiveMod.settings.BuildOnRoadEnabled&&(ԁ９ߎ.с४̉>>7)===ո᠌ܝ.о̗ᴌ);if(!__ilmRoad){α̃̎[ԁ９ߎ.ᅠᴀ︄][ԁ９ߎ.ᴉ९ܘ].оᄀ̢ = ㅤ๖９;α̃̎[ ԁ９ߎ.ᅠᴀ︄][ ԁ９ߎ.ᴉ९ܘ ] .οࡅᴏ= ԁ９ߎ.ρ͏१;α̃̎[ԁ９ߎ.ᅠᴀ︄] [ԁ９ߎ.ᴉ९ܘ] .ԁ̶̀=ⲥ９̎;}var ᴑࠀᚄ=(ԁ９ߎ.с४̉>> 05) & і๕ܝ;var օࠃܜ=оܘᚊ[ԁ９ߎ.с४̉>>ɑⲟᴌ];var ё̏=ᴉеᄅ;if(!__ilmRoad){α̃̎[ ԁ９ߎ.ᅠᴀ︄][ԁ９ߎ.ᴉ९ܘ].ԁ̶̀=օࠃܜ[аո̙] .ԁ̶̀;}"
+    }
+  ]
+}

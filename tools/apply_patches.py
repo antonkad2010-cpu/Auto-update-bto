@@ -10,6 +10,7 @@ import json
 from pathlib import Path
 import re
 import sys
+import subprocess
 
 def sha256(text):
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
@@ -97,9 +98,19 @@ def load_manifest(path):
     """Load readable payloads without duplicating them in the version manifest."""
     path = Path(path)
     spec = json.loads(path.read_text(encoding="utf-8"))
+    binding_path = None
+    if spec.get('payload_bindings'):
+        root = path.resolve().parent.parent
+        binding_path = (path.parent / spec['payload_bindings']).resolve()
+        if not binding_path.is_relative_to(root) or not binding_path.is_file():
+            die('payload bindings are missing or outside the project')
     for patch in spec.get("patches", []):
         files = patch.get("replacement_files")
         if files is None:
+            if patch.get('id') == 'install-responsive-runtime':
+                metadata = {'source_sha256': spec['base_sha256'],
+                            'source_url': spec.get('source_url')}
+                patch['replacement'] = 'var __devastBuildInfo=' + json.dumps(metadata) + ';\n' + patch['replacement']
             continue
         if "replacement" in patch or not isinstance(files, list) or not files:
             die("replacement_files must be a nonempty list without replacement")
@@ -112,7 +123,19 @@ def load_manifest(path):
             if not target.is_relative_to(root) or not target.is_file():
                 die("replacement file is missing or outside the project")
             parts.append(target.read_text(encoding="utf-8"))
-        patch["replacement"] = "\n" + "\n".join(parts) + "\n"
+        payload = "\n" + "\n".join(parts) + "\n"
+        if binding_path:
+            translated = subprocess.run(
+                ['node', str(root / 'tools' / 'translate_payload.cjs'), str(binding_path)],
+                input=payload, text=True, capture_output=True, timeout=30)
+            if translated.returncode:
+                die('payload translation failed: ' + translated.stderr[-1000:])
+            payload = translated.stdout
+        if patch.get('id') == 'install-responsive-runtime':
+            metadata = {'source_sha256': spec['base_sha256'],
+                        'source_url': spec.get('source_url')}
+            payload = 'var __devastBuildInfo=' + json.dumps(metadata) + ';\n' + payload
+        patch["replacement"] = payload
     return spec
 
 def main():
@@ -125,6 +148,15 @@ def main():
     base = Path(args.base).read_text(encoding="utf-8")
     spec = load_manifest(args.manifest)
     output, report = apply(base, spec)
+    # A retained last-good build must not run against a differently named bundle.
+    source_url = spec.get('source_url')
+    if source_url:
+        guard = (';(function(){if(typeof document===\'undefined\')return;'
+                 'var s=document.currentScript;if(!s||!s.src)return;'
+                 'var u=new URL(s.src,location.href),expected=new URL(' + json.dumps(source_url) + ');'
+                 'if(u.hostname===expected.hostname&&u.pathname.startsWith(\'/js/\')&&u.pathname!==expected.pathname)'
+                 'throw new Error(\'Devast mod: this game version needs updated bindings. Check dist/update-status.json.\');})();\n')
+        output = guard + output
     path = Path(args.output)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(output, encoding="utf-8")

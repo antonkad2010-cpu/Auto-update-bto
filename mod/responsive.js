@@ -886,6 +886,8 @@ function __installDevastMod(B) {
       schemaVersion: 1,
       scope: 'Local mod commands and input; native packets are not captured',
       aimTransport: 'ilm-direct-v1',
+      sourceSha256: B.buildInfo?.source_sha256 || null,
+      sourceUrl: B.buildInfo?.source_url || null,
       networkState: B.network.state,
       nativeIntegrityFlag: nativeIntegrityFlag(),
       nativeExportPresent: nativeExportPresence(),
@@ -1772,8 +1774,12 @@ function __installDevastMod(B) {
     if (stopped || menu) return;
     if (!window.dat || !window.dat.GUI) throw new Error('dat.GUI did not load');
     menu = new window.dat.GUI({
-      width: 310
+      width: 310,
+      autoPlace: false
     });
+    // The native account panel has its own stacking context above dat.GUI's container.
+    document.body.appendChild(menu.domElement);
+    removers.push(() => menu.domElement.remove());
     window.removeEventListener('keydown', window.dat.GUI._keydownHandler, false);
     const style = document.createElement('style');
     style.textContent = '.dg.main{position:fixed!important;top:10px!important;right:10px!important;max-height:92vh;overflow:auto;z-index:2147483647!important;background:#190707!important;border:1px solid #a22;border-radius:6px}.dg .title{color:#ffaaaa}.dg .slider-fg{background:#a22!important}.dg .cr{background:#190d0d}';
